@@ -352,73 +352,35 @@ end)
 
 local flyOn = false
 local flyConn = nil
-local flyAtt0, flyAtt1 = nil, nil
-local flyLV, flyAO = nil, nil
 
 local function stopFly()
     flyOn = false
     if flyConn then flyConn:Disconnect() flyConn = nil end
-    if flyLV and flyLV.Parent then flyLV:Destroy() end
-    if flyAO and flyAO.Parent then flyAO:Destroy() end
-    if flyAtt0 and flyAtt0.Parent then flyAtt0:Destroy() end
-    if flyAtt1 and flyAtt1.Parent then flyAtt1:Destroy() end
-    flyLV, flyAO, flyAtt0, flyAtt1 = nil, nil, nil, nil
-    -- Re-enable gravity
     local rp = Character and Character:FindFirstChild("HumanoidRootPart")
     local hum = Character and Character:FindFirstChildOfClass("Humanoid")
-    if rp then rp.AssemblyLinearVelocity = Vector3.zero end
     if hum then hum.PlatformStand = false end
+    if rp then rp.AssemblyLinearVelocity = Vector3.zero end
 end
 
 local function startFly()
     local rp = Character and Character:FindFirstChild("HumanoidRootPart")
     local hum = Character and Character:FindFirstChildOfClass("Humanoid")
     if not rp or not hum then return end
-
-    stopFly()
+    if flyConn then flyConn:Disconnect() flyConn = nil end
     flyOn = true
-
-    -- PlatformStand supaya Humanoid tidak melawan physics
     hum.PlatformStand = true
 
-    -- Attachment sebagai anchor
-    flyAtt0 = Instance.new("Attachment")
-    flyAtt0.Position = Vector3.zero
-    flyAtt0.Parent = rp
+    flyConn = RunService.Heartbeat:Connect(function(dt)
+        rp = Character and Character:FindFirstChild("HumanoidRootPart")
+        hum = Character and Character:FindFirstChildOfClass("Humanoid")
+        if not flyOn or not rp or not hum then stopFly() return end
 
-    flyAtt1 = Instance.new("Attachment")
-    flyAtt1.Position = Vector3.zero
-    flyAtt1.Parent = workspace.Terrain
+        hum.PlatformStand = true
 
-    -- LinearVelocity: gantikan BodyVelocity (API modern)
-    flyLV = Instance.new("LinearVelocity")
-    flyLV.Attachment0 = flyAtt0
-    flyLV.MaxForce = 1e5
-    flyLV.RelativeTo = Enum.ActuatorRelativeTo.World
-    flyLV.VectorVelocity = Vector3.zero
-    flyLV.Parent = rp
-
-    -- AlignOrientation: gantikan BodyGyro (API modern)
-    flyAO = Instance.new("AlignOrientation")
-    flyAO.Attachment0 = flyAtt0
-    flyAO.Attachment1 = flyAtt1
-    flyAO.MaxTorque = 1e5
-    flyAO.Responsiveness = 50
-    flyAO.RigidityEnabled = false
-    flyAO.Parent = rp
-
-    flyConn = RunService.Heartbeat:Connect(function()
-        -- Ambil RootPart fresh tiap frame
-        local root = Character and Character:FindFirstChild("HumanoidRootPart")
-        if not flyOn or not root or not flyLV or not flyLV.Parent then
-            stopFly() return
-        end
-
+        local spd = 60
         local dir = Vector3.zero
-        local cam = Camera.CFrame
-        local spd = 40
+        local cam = workspace.CurrentCamera.CFrame
 
-        -- PC keyboard
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.RightVector end
@@ -426,22 +388,10 @@ local function startFly()
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0,1,0) end
 
-        -- Mobile: pakai thumbstick kiri jika ada
-        if isMobile then
-            local ts = UserInputService:GetGamepadState(Enum.UserInputType.Gamepad1)
-            for _,s in ipairs(ts) do
-                if s.KeyCode == Enum.KeyCode.Thumbstick1 then
-                    local v = s.Position
-                    dir = dir + cam.LookVector * v.Y + cam.RightVector * v.X
-                end
-            end
-        end
-
-        flyLV.VectorVelocity = dir.Magnitude > 0 and dir.Unit * spd or Vector3.zero
-
-        -- Align orientasi ke arah kamera (hanya yaw)
-        if flyAO and flyAtt1 then
-            flyAtt1.WorldCFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.atan2(-cam.LookVector.X, -cam.LookVector.Z), 0)
+        if dir.Magnitude > 0 then
+            rp.AssemblyLinearVelocity = dir.Unit * spd
+        else
+            rp.AssemblyLinearVelocity = Vector3.zero
         end
     end)
 end
@@ -1853,26 +1803,47 @@ createSection("Extra","DISCORD WEBHOOK")
 
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1548440747714289826/x1ukko9NJb9MJle61z51ive78eg5ZtsaYNjmdPJLWLFm4yU2wGxgcsnTxMfP5w3qMCMb"
 
+-- Cari fungsi http yang tersedia di executor
+local httpRequest = (syn and syn.request) or (http and http.request) or
+                   (typeof(request)=="function" and request) or
+                   (typeof(HttpRequest)=="function" and HttpRequest) or nil
+
 local function sendWebhook(content)
+    if not httpRequest then return end -- executor tidak support http
     pcall(function()
-        local HttpService=game:GetService("HttpService")
-        local body=HttpService:JSONEncode({
-            username="Veron Hub",
-            embeds={{
-                title="📡 Veron Hub Logger",
-                color=7077887,
-                fields={
-                    {name="Player",value=LocalPlayer.Name.." ("..LocalPlayer.UserId..")",inline=true},
-                    {name="Game",value=game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,inline=true},
-                    {name="Server",value=game.JobId,inline=false},
-                    {name="Log",value=content,inline=false},
+        local HttpService = game:GetService("HttpService")
+        local gameName = "Unknown"
+        pcall(function()
+            gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+        end)
+        local body = HttpService:JSONEncode({
+            username = "Veron Hub",
+            embeds = {{
+                title = "📡 Veron Hub Logger",
+                color = 7077887,
+                fields = {
+                    {name="Player", value=LocalPlayer.Name.." ("..LocalPlayer.UserId..")", inline=true},
+                    {name="Game",   value=gameName, inline=true},
+                    {name="Server", value=game.JobId, inline=false},
+                    {name="Log",    value=content,   inline=false},
                 },
-                footer={text="Veron Hub v3.3 • "..os.date("%Y-%m-%d %H:%M:%S")},
+                footer = {text="Veron Hub v3.3"},
             }}
         })
-        HttpService:PostAsync(WEBHOOK_URL,body,Enum.HttpContentType.ApplicationJson)
+        httpRequest({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {["Content-Type"]="application/json"},
+            Body = body,
+        })
     end)
 end
+
+-- Auto send saat script dijalankan
+task.spawn(function()
+    task.wait(2) -- tunggu game fully loaded
+    sendWebhook("🚀 Script dieksekusi")
+end)
 
 -- Toggle log chat ke webhook
 createToggle("Extra","Log Chat → Webhook","Kirim chat ke Discord webhook",function(s) _G.WebhookChat=s end)
