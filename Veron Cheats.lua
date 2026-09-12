@@ -1,5 +1,5 @@
 -- ================================================
---   VERON HUB v3.0 - Roblox Executor
+--   VERON HUB v3.2 - Roblox Executor
 --   UI: Dark Purple Neon | Tab System
 --   Made by Veron
 -- ================================================
@@ -51,6 +51,21 @@ local Themes = {
         neon=Color3.fromRGB(34,197,94), neonDim=Color3.fromRGB(21,128,61), neonGlow=Color3.fromRGB(134,239,172),
         tabActive=Color3.fromRGB(21,128,61),
     },
+    Pink = {
+        bg=Color3.fromRGB(20,8,16), bg2=Color3.fromRGB(36,12,28), bg3=Color3.fromRGB(54,18,42),
+        neon=Color3.fromRGB(236,72,153), neonDim=Color3.fromRGB(190,24,93), neonGlow=Color3.fromRGB(249,168,212),
+        tabActive=Color3.fromRGB(190,24,93),
+    },
+    Gold = {
+        bg=Color3.fromRGB(20,16,7), bg2=Color3.fromRGB(38,30,12), bg3=Color3.fromRGB(55,44,18),
+        neon=Color3.fromRGB(234,179,8), neonDim=Color3.fromRGB(161,98,7), neonGlow=Color3.fromRGB(253,230,138),
+        tabActive=Color3.fromRGB(161,98,7),
+    },
+    Midnight = {
+        bg=Color3.fromRGB(5,7,14), bg2=Color3.fromRGB(10,15,28), bg3=Color3.fromRGB(16,23,42),
+        neon=Color3.fromRGB(99,102,241), neonDim=Color3.fromRGB(67,56,202), neonGlow=Color3.fromRGB(165,180,252),
+        tabActive=Color3.fromRGB(67,56,202),
+    },
 }
 
 local currentTheme = _G.VeronConfig.theme or "Purple"
@@ -81,7 +96,13 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Veron"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = game.CoreGui
+local guiParent = game.CoreGui
+pcall(function()
+    if typeof(gethui) == "function" then
+        guiParent = gethui()
+    end
+end)
+ScreenGui.Parent = guiParent
 
 -- Open Button
 local OpenBtn = Instance.new("TextButton")
@@ -123,7 +144,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1,-50,1,0)
 TitleLabel.Position = UDim2.new(0,14,0,0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "⚡  VERON HUB  |  v3.0"
+TitleLabel.Text = "⚡  VERON HUB  |  v3.2"
 TitleLabel.TextColor3 = C.neonGlow
 TitleLabel.TextSize = 14
 TitleLabel.Font = Enum.Font.GothamBold
@@ -330,27 +351,37 @@ createToggle("Movement","High Jump","JumpPower 100",function(s)
 end)
 
 local flyOn=false local flyBV,flyBG
+local flyConnection=nil
 createToggle("Movement","Fly","WASD + Space / Shift",function(s)
     flyOn=s
     if s then
-        flyBV=Instance.new("BodyVelocity") flyBV.Velocity=Vector3.new(0,0,0)
-        flyBV.MaxForce=Vector3.new(1e5,1e5,1e5) flyBV.Parent=RootPart
-        flyBG=Instance.new("BodyGyro") flyBG.MaxTorque=Vector3.new(1e5,1e5,1e5)
-        flyBG.CFrame=RootPart.CFrame flyBG.Parent=RootPart
-        RunService.Heartbeat:Connect(function()
-            if not flyOn then return end
-            local dir=Vector3.new(0,0,0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir=dir+Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir=dir-Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir=dir-Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir=dir+Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir=dir+Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir=dir-Vector3.new(0,1,0) end
-            flyBV.Velocity=dir.Magnitude>0 and dir.Unit*40 or Vector3.new(0,0,0)
-        end)
-    else
         if flyBV then flyBV:Destroy() end
         if flyBG then flyBG:Destroy() end
+        flyBV=Instance.new("BodyVelocity")
+        flyBV.Velocity=Vector3.new(0,0,0)
+        flyBV.MaxForce=Vector3.new(1e5,1e5,1e5)
+        flyBV.Parent=RootPart
+        flyBG=Instance.new("BodyGyro")
+        flyBG.MaxTorque=Vector3.new(1e5,1e5,1e5)
+        flyBG.CFrame=RootPart.CFrame
+        flyBG.Parent=RootPart
+        if not flyConnection then
+            flyConnection=RunService.Heartbeat:Connect(function()
+                if not flyOn or not flyBV or not flyBV.Parent then return end
+                local dir=Vector3.new(0,0,0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir=dir+Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir=dir-Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir=dir-Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir=dir+Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir=dir+Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir=dir-Vector3.new(0,1,0) end
+                flyBV.Velocity=dir.Magnitude>0 and dir.Unit*40 or Vector3.new(0,0,0)
+                if flyBG then flyBG.CFrame=Camera.CFrame end
+            end)
+        end
+    else
+        if flyBV then flyBV:Destroy() flyBV=nil end
+        if flyBG then flyBG:Destroy() flyBG=nil end
     end
 end)
 
@@ -394,6 +425,25 @@ _G.AntiRagdoll=false
 
 createToggle("Combat","Infinite Stamina","Stamina selalu penuh",function(s) _G.InfStamina=s end)
 _G.InfStamina=false
+
+createSection("Combat","ADMIN / TEST COMBAT")
+local combatTestEnabled = {
+    HitboxTest = false,
+    RecoilTest = false,
+    SpreadTest = false,
+}
+createToggle("Combat","Hitbox Test","Test hitbox settings for your own game",function(v)
+    combatTestEnabled.HitboxTest=v
+    showToast("Hitbox Test: "..(v and "ON" or "OFF"),v)
+end)
+createToggle("Combat","No Recoil Test","Test weapon recoil behavior in your own game",function(v)
+    combatTestEnabled.RecoilTest=v
+    showToast("No Recoil Test: "..(v and "ON" or "OFF"),v)
+end)
+createToggle("Combat","No Spread Test","Test weapon spread behavior in your own game",function(v)
+    combatTestEnabled.SpreadTest=v
+    showToast("No Spread Test: "..(v and "ON" or "OFF"),v)
+end)
 
 createSection("Combat","GUN MODS")
 
@@ -439,23 +489,24 @@ RunService.Heartbeat:Connect(function()
             if v:IsA("ValueBase") then
                 local n=v.Name:lower()
                 if infAmmoOn and (n:find("ammo") or n:find("clip") or n:find("bullet") or n:find("mag")) then v.Value=999 end
-                if noRecoilOn and (n:find("recoil") or n:find("kick")) then v.Value=0 end
-                if noSpreadOn and (n:find("spread") or n:find("accuracy")) then v.Value=0 end
+                if (noRecoilOn or combatTestEnabled.RecoilTest) and (n:find("recoil") or n:find("kick")) then v.Value=0 end
+                if (noSpreadOn or combatTestEnabled.SpreadTest) and (n:find("spread") or n:find("accuracy")) then v.Value=0 end
             end
         end
     end
     -- Hitbox
+    local hitboxActive = hitboxOn or combatTestEnabled.HitboxTest
     for _,p in ipairs(Players:GetPlayers()) do
         if p~=LocalPlayer and p.Character then
             local head=p.Character:FindFirstChild("Head")
             local hrp=p.Character:FindFirstChild("HumanoidRootPart")
             if head then
-                head.Size=hitboxOn and Vector3.new(8,8,8) or Vector3.new(1.2,1.2,1.2)
-                head.Transparency=hitboxOn and 0.7 or 0
+                head.Size=hitboxActive and Vector3.new(8,8,8) or Vector3.new(1.2,1.2,1.2)
+                head.Transparency=hitboxActive and 0.7 or 0
                 head.CanCollide=false
             end
             if hrp then
-                hrp.Size=hitboxOn and Vector3.new(8,8,8) or Vector3.new(2,2,1)
+                hrp.Size=hitboxActive and Vector3.new(8,8,8) or Vector3.new(2,2,1)
                 hrp.Transparency=1 hrp.CanCollide=false
             end
         end
@@ -867,11 +918,28 @@ local PLFC=Instance.new("UICorner") PLFC.CornerRadius=UDim.new(0,10) PLFC.Parent
 local PLFL=Instance.new("UIListLayout") PLFL.Padding=UDim.new(0,2) PLFL.Parent=PlayerListFrame
 local PLFPad=Instance.new("UIPadding") PLFPad.PaddingTop=UDim.new(0,6) PLFPad.PaddingBottom=UDim.new(0,6) PLFPad.Parent=PlayerListFrame
 
+local PlayerSearch=Instance.new("TextBox")
+PlayerSearch.Size=UDim2.new(1,0,0,32)
+PlayerSearch.BackgroundColor3=C.bg2
+PlayerSearch.Text=""
+PlayerSearch.PlaceholderText="🔎 Search player..."
+PlayerSearch.TextColor3=C.text
+PlayerSearch.PlaceholderColor3=C.textDim
+PlayerSearch.TextSize=11
+PlayerSearch.Font=Enum.Font.Gotham
+PlayerSearch.BorderSizePixel=0
+PlayerSearch.ClearTextOnFocus=false
+PlayerSearch.Parent=TabPages["Extra"]
+local PSC=Instance.new("UICorner") PSC.CornerRadius=UDim.new(0,8) PSC.Parent=PlayerSearch
+
 local playerRows={}
 local function refreshPlayerList()
+
     for _,row in pairs(playerRows) do row:Destroy() end
     playerRows={}
+    local query=PlayerSearch.Text:lower()
     for _,p in ipairs(Players:GetPlayers()) do
+        if query=="" or p.Name:lower():find(query,1,true) or p.DisplayName:lower():find(query,1,true) then
         local row=Instance.new("Frame")
         row.Size=UDim2.new(1,0,0,28)
         row.BackgroundTransparency=1
@@ -884,7 +952,7 @@ local function refreshPlayerList()
         local nl=Instance.new("TextLabel")
         nl.Size=UDim2.new(0.7,0,1,0) nl.Position=UDim2.new(0,22,0,0)
         nl.BackgroundTransparency=1
-        nl.Text=(p==LocalPlayer and "[You] " or "")..p.Name
+        nl.Text=(p==LocalPlayer and "[You] " or "")..p.DisplayName.."  @"..p.Name
         nl.TextColor3=p==LocalPlayer and C.green or C.text
         nl.TextSize=11 nl.Font=Enum.Font.Gotham
         nl.TextXAlignment=Enum.TextXAlignment.Left nl.Parent=row
@@ -896,9 +964,12 @@ local function refreshPlayerList()
         dl.Font=Enum.Font.Gotham dl.TextXAlignment=Enum.TextXAlignment.Right
         dl.Parent=row
         table.insert(playerRows,row)
+        end
     end
 end
 refreshPlayerList()
+
+PlayerSearch:GetPropertyChangedSignal("Text"):Connect(refreshPlayerList)
 
 -- Update jarak player list setiap detik
 local plTimer=0
@@ -1000,9 +1071,71 @@ for _,name in ipairs(themeNames) do
         TitleBar.BackgroundColor3=C.bg2
         TitleLabel.TextColor3=C.neonGlow
         OS.Color=C.neon
+        TabBar.BackgroundColor3=C.bg2
+        for n,b in pairs(TabBtns) do
+            b.TextColor3=(TabPages[n].Visible and C.neonGlow or C.textDim)
+            b.BackgroundColor3=(TabPages[n].Visible and C.tabActive or C.tabOff)
+        end
+        PlayerSearch.BackgroundColor3=C.bg2
+        FpsLabel.BackgroundColor3=C.bg2
         showToast("Theme: "..name,true)
     end)
 end
+
+
+local function ThemeBtn(name, color)
+    local btn=Instance.new("TextButton")
+    btn.Size=UDim2.new(0,68,0,34)
+    btn.BackgroundColor3=Themes[name] and Themes[name].neonDim or color
+    btn.Text=name btn.TextColor3=Color3.fromRGB(255,255,255)
+    btn.TextSize=11 btn.Font=Enum.Font.GothamBold
+    btn.BorderSizePixel=0 btn.Parent=ThemeGrid
+    local bc=Instance.new("UICorner") bc.CornerRadius=UDim.new(0,8) bc.Parent=btn
+    local bs=Instance.new("UIStroke") bs.Color=color bs.Thickness=1.5 bs.Parent=btn
+    btn.MouseButton1Click:Connect(function()
+        applyTheme(name)
+        MainFrame.BackgroundColor3=C.bg
+        MFS.Color=C.neon
+        TitleBar.BackgroundColor3=C.bg2
+        TitleLabel.TextColor3=C.neonGlow
+        OS.Color=C.neon
+        TabBar.BackgroundColor3=C.bg2
+        for n,b in pairs(TabBtns) do
+            b.TextColor3=(TabPages[n].Visible and C.neonGlow or C.textDim)
+            b.BackgroundColor3=(TabPages[n].Visible and C.tabActive or C.tabOff)
+        end
+        PlayerSearch.BackgroundColor3=C.bg2
+        FpsLabel.BackgroundColor3=C.bg2
+        showToast("Theme: "..name,true)
+    end)
+end
+
+ThemeBtn("Pink", Color3.fromRGB(236,72,153))
+ThemeBtn("Gold", Color3.fromRGB(234,179,8))
+ThemeBtn("Midnight", Color3.fromRGB(99,102,241))
+createSection("Extra","PERFORMANCE")
+local FpsLabel=Instance.new("TextLabel")
+FpsLabel.Size=UDim2.new(1,0,0,28)
+FpsLabel.BackgroundColor3=C.bg2
+FpsLabel.Text="FPS: --"
+FpsLabel.TextColor3=C.neonGlow
+FpsLabel.TextSize=11
+FpsLabel.Font=Enum.Font.GothamBold
+FpsLabel.BorderSizePixel=0
+FpsLabel.Parent=TabPages["Extra"]
+local FLC=Instance.new("UICorner") FLC.CornerRadius=UDim.new(0,8) FLC.Parent=FpsLabel
+
+local fpsFrames=0
+local fpsElapsed=0
+RunService.RenderStepped:Connect(function(dt)
+    fpsFrames=fpsFrames+1
+    fpsElapsed=fpsElapsed+dt
+    if fpsElapsed>=1 then
+        FpsLabel.Text="FPS: "..math.floor(fpsFrames/fpsElapsed)
+        fpsFrames=0
+        fpsElapsed=0
+    end
+end)
 
 createSection("Extra","KEYBIND (PC)")
 
@@ -1066,9 +1199,11 @@ UserInputService.InputBegan:Connect(function(input,gp)
     end
 end)
 
+-- Combat test state for game-owned/admin systems.
+_G.VeronCombatTest = combatTestEnabled
+
 -- ================================================
-print("✅ Veron Hub v3.0 | Made by Veron")
+print("✅ Veron Hub v3.2 | Made by Veron")
 print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
+print("   v3.1: stable UI + player search + FPS + theme refresh")
 -- ================================================
-
-
