@@ -1,4 +1,3 @@
-cat > /mnt/user-data/outputs/GuiHub.lua << 'ENDOFSCRIPT'
 -- ================================================
 --   VERON HUB v3.0 - Roblox Executor
 --   UI: Dark Purple Neon | Tab System
@@ -1073,3 +1072,4 @@ print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
 -- ================================================
 ENDOFSCRIPT
 echo "Done: $(wc -l < /mnt/user-data/outputs/GuiHub.lua) lines"
+
