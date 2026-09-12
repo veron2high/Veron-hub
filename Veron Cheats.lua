@@ -1,5 +1,5 @@
 -- ================================================
---   VERON HUB v3.2 - Roblox Executor
+--   VERON HUB v3.3 - Roblox Executor
 --   UI: Dark Purple Neon | Tab System
 --   Made by Veron
 -- ================================================
@@ -144,7 +144,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1,-50,1,0)
 TitleLabel.Position = UDim2.new(0,14,0,0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "⚡  VERON HUB  |  v3.2"
+TitleLabel.Text = "⚡  VERON HUB  |  v3.3"
 TitleLabel.TextColor3 = C.neonGlow
 TitleLabel.TextSize = 14
 TitleLabel.Font = Enum.Font.GothamBold
@@ -350,38 +350,182 @@ createToggle("Movement","High Jump","JumpPower 100",function(s)
     end
 end)
 
-local flyOn=false local flyBV,flyBG
-local flyConnection=nil
-createToggle("Movement","Fly","WASD + Space / Shift",function(s)
-    flyOn=s
-    if s then
-        if flyBV then flyBV:Destroy() end
-        if flyBG then flyBG:Destroy() end
-        flyBV=Instance.new("BodyVelocity")
-        flyBV.Velocity=Vector3.new(0,0,0)
-        flyBV.MaxForce=Vector3.new(1e5,1e5,1e5)
-        flyBV.Parent=RootPart
-        flyBG=Instance.new("BodyGyro")
-        flyBG.MaxTorque=Vector3.new(1e5,1e5,1e5)
-        flyBG.CFrame=RootPart.CFrame
-        flyBG.Parent=RootPart
-        if not flyConnection then
-            flyConnection=RunService.Heartbeat:Connect(function()
-                if not flyOn or not flyBV or not flyBV.Parent then return end
-                local dir=Vector3.new(0,0,0)
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir=dir+Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir=dir-Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir=dir-Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir=dir+Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir=dir+Vector3.new(0,1,0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir=dir-Vector3.new(0,1,0) end
-                flyBV.Velocity=dir.Magnitude>0 and dir.Unit*40 or Vector3.new(0,0,0)
-                if flyBG then flyBG.CFrame=Camera.CFrame end
-            end)
+local flyOn = false
+local flyConn = nil
+local flyAtt0, flyAtt1 = nil, nil
+local flyLV, flyAO = nil, nil
+
+local function stopFly()
+    flyOn = false
+    if flyConn then flyConn:Disconnect() flyConn = nil end
+    if flyLV and flyLV.Parent then flyLV:Destroy() end
+    if flyAO and flyAO.Parent then flyAO:Destroy() end
+    if flyAtt0 and flyAtt0.Parent then flyAtt0:Destroy() end
+    if flyAtt1 and flyAtt1.Parent then flyAtt1:Destroy() end
+    flyLV, flyAO, flyAtt0, flyAtt1 = nil, nil, nil, nil
+    -- Re-enable gravity
+    local rp = Character and Character:FindFirstChild("HumanoidRootPart")
+    local hum = Character and Character:FindFirstChildOfClass("Humanoid")
+    if rp then rp.AssemblyLinearVelocity = Vector3.zero end
+    if hum then hum.PlatformStand = false end
+end
+
+local function startFly()
+    local rp = Character and Character:FindFirstChild("HumanoidRootPart")
+    local hum = Character and Character:FindFirstChildOfClass("Humanoid")
+    if not rp or not hum then return end
+
+    stopFly()
+    flyOn = true
+
+    -- PlatformStand supaya Humanoid tidak melawan physics
+    hum.PlatformStand = true
+
+    -- Attachment sebagai anchor
+    flyAtt0 = Instance.new("Attachment")
+    flyAtt0.Position = Vector3.zero
+    flyAtt0.Parent = rp
+
+    flyAtt1 = Instance.new("Attachment")
+    flyAtt1.Position = Vector3.zero
+    flyAtt1.Parent = workspace.Terrain
+
+    -- LinearVelocity: gantikan BodyVelocity (API modern)
+    flyLV = Instance.new("LinearVelocity")
+    flyLV.Attachment0 = flyAtt0
+    flyLV.MaxForce = 1e5
+    flyLV.RelativeTo = Enum.ActuatorRelativeTo.World
+    flyLV.VectorVelocity = Vector3.zero
+    flyLV.Parent = rp
+
+    -- AlignOrientation: gantikan BodyGyro (API modern)
+    flyAO = Instance.new("AlignOrientation")
+    flyAO.Attachment0 = flyAtt0
+    flyAO.Attachment1 = flyAtt1
+    flyAO.MaxTorque = 1e5
+    flyAO.Responsiveness = 50
+    flyAO.RigidityEnabled = false
+    flyAO.Parent = rp
+
+    flyConn = RunService.Heartbeat:Connect(function()
+        -- Ambil RootPart fresh tiap frame
+        local root = Character and Character:FindFirstChild("HumanoidRootPart")
+        if not flyOn or not root or not flyLV or not flyLV.Parent then
+            stopFly() return
         end
-    else
-        if flyBV then flyBV:Destroy() flyBV=nil end
-        if flyBG then flyBG:Destroy() flyBG=nil end
+
+        local dir = Vector3.zero
+        local cam = Camera.CFrame
+        local spd = 40
+
+        -- PC keyboard
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0,1,0) end
+
+        -- Mobile: pakai thumbstick kiri jika ada
+        if isMobile then
+            local ts = UserInputService:GetGamepadState(Enum.UserInputType.Gamepad1)
+            for _,s in ipairs(ts) do
+                if s.KeyCode == Enum.KeyCode.Thumbstick1 then
+                    local v = s.Position
+                    dir = dir + cam.LookVector * v.Y + cam.RightVector * v.X
+                end
+            end
+        end
+
+        flyLV.VectorVelocity = dir.Magnitude > 0 and dir.Unit * spd or Vector3.zero
+
+        -- Align orientasi ke arah kamera (hanya yaw)
+        if flyAO and flyAtt1 then
+            flyAtt1.WorldCFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.atan2(-cam.LookVector.X, -cam.LookVector.Z), 0)
+        end
+    end)
+end
+
+createToggle("Movement","Fly","WASD + Space / Shift",function(s)
+    if s then startFly() else stopFly() end
+end)
+
+-- Speed Slider
+do
+    local sRow=Instance.new("Frame")
+    sRow.Size=UDim2.new(1,0,0,48) sRow.BackgroundColor3=C.bg2 sRow.BorderSizePixel=0
+    sRow.Parent=TabPages["Movement"]
+    local sRC=Instance.new("UICorner") sRC.CornerRadius=UDim.new(0,10) sRC.Parent=sRow
+    local sRS=Instance.new("UIStroke") sRS.Color=C.neonDim sRS.Thickness=0.8 sRS.Parent=sRow
+    local sLbl=Instance.new("TextLabel")
+    sLbl.Size=UDim2.new(1,-10,0,18) sLbl.Position=UDim2.new(0,12,0,4)
+    sLbl.BackgroundTransparency=1 sLbl.Text="Walk Speed: 16"
+    sLbl.TextColor3=C.text sLbl.TextSize=12
+    sLbl.Font=Enum.Font.GothamBold sLbl.TextXAlignment=Enum.TextXAlignment.Left sLbl.Parent=sRow
+    local sTrk=Instance.new("Frame")
+    sTrk.Size=UDim2.new(1,-24,0,6) sTrk.Position=UDim2.new(0,12,0,32)
+    sTrk.BackgroundColor3=C.bg3 sTrk.BorderSizePixel=0 sTrk.Parent=sRow
+    local sTC=Instance.new("UICorner") sTC.CornerRadius=UDim.new(1,0) sTC.Parent=sTrk
+    local sFill=Instance.new("Frame")
+    sFill.Size=UDim2.new(0,0,1,0) sFill.BackgroundColor3=C.neon sFill.BorderSizePixel=0 sFill.Parent=sTrk
+    local sFC=Instance.new("UICorner") sFC.CornerRadius=UDim.new(1,0) sFC.Parent=sFill
+    local sThumb=Instance.new("TextButton")
+    sThumb.Size=UDim2.new(0,14,0,14) sThumb.AnchorPoint=Vector2.new(0.5,0.5)
+    sThumb.Position=UDim2.new(0,0,0.5,0) sThumb.BackgroundColor3=C.neonGlow
+    sThumb.Text="" sThumb.BorderSizePixel=0 sThumb.Parent=sTrk
+    local sTC2=Instance.new("UICorner") sTC2.CornerRadius=UDim.new(1,0) sTC2.Parent=sThumb
+    local minSpd,maxSpd=16,500
+    local sDrag=false
+    local function updateSpeed(pct)
+        pct=math.clamp(pct,0,1)
+        local spd=math.floor(minSpd+(maxSpd-minSpd)*pct)
+        sFill.Size=UDim2.new(pct,0,1,0)
+        sThumb.Position=UDim2.new(pct,0,0.5,0)
+        sLbl.Text="Walk Speed: "..spd
+        local h=Character and Character:FindFirstChildOfClass("Humanoid")
+        if h then h.WalkSpeed=spd end
+    end
+    local function onSInput(x)
+        local abs=sTrk.AbsolutePosition.X local w=sTrk.AbsoluteSize.X
+        updateSpeed((x-abs)/w)
+    end
+    sThumb.MouseButton1Down:Connect(function() sDrag=true end)
+    sTrk.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.Touch then sDrag=true onSInput(i.Position.X) end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if not sDrag then return end
+        if i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch then
+            onSInput(i.Position.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then sDrag=false end
+    end)
+end
+
+-- Blink (dash ke arah kamera)
+createToggle("Movement","Blink","Q = dash instan ke depan",function(s) _G.BlinkOn=s end)
+_G.BlinkOn=false
+UserInputService.InputBegan:Connect(function(input,gp)
+    if gp then return end
+    if _G.BlinkOn and input.KeyCode==Enum.KeyCode.Q then
+        local rp=Character and Character:FindFirstChild("HumanoidRootPart")
+        if rp then
+            rp.CFrame = rp.CFrame + Camera.CFrame.LookVector * 30
+        end
+    end
+end)
+
+-- Teleport to Cursor
+createToggle("Movement","TP to Cursor","Klik titik di map, teleport ke sana",function(s) _G.TpCursor=s end)
+_G.TpCursor=false
+local mouse=LocalPlayer:GetMouse()
+mouse.Button2Down:Connect(function()
+    if not _G.TpCursor then return end
+    local rp=Character and Character:FindFirstChild("HumanoidRootPart")
+    if rp and mouse.Target then
+        rp.CFrame=CFrame.new(mouse.Hit.Position+Vector3.new(0,3,0))
     end
 end)
 
@@ -445,10 +589,210 @@ createToggle("Combat","No Spread Test","Test weapon spread behavior in your own 
     showToast("No Spread Test: "..(v and "ON" or "OFF"),v)
 end)
 
+-- Aimbot Lock-On (hold RightAlt / mobile button)
+createSection("Combat","AIMBOT")
+local aimbotOn=false
+local aimbotLocked=nil
+createToggle("Combat","Aimbot Lock-On","Hold RAlt (PC) untuk lock target",function(s)
+    aimbotOn=s
+    if not s then aimbotLocked=nil end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not aimbotOn then return end
+    local holding=UserInputService:IsKeyDown(Enum.KeyCode.RightAlt)
+    -- Mobile: cek touch dengan 2 jari (pinch gesture sebagai trigger)
+    if isMobile then
+        local touches=UserInputService:GetKeysPressed()
+        -- pakai silentAimTarget sebagai proxy lock jika mobile
+        holding=silentAimOn and silentAimTarget~=nil
+    end
+    if holding then
+        local t=getClosestTarget()
+        aimbotLocked=t
+    end
+    if aimbotLocked and aimbotLocked.Parent then
+        local cf=Camera.CFrame
+        local targetPos=aimbotLocked.Position
+        Camera.CFrame=cf:Lerp(CFrame.lookAt(cf.Position,targetPos),0.25)
+    else
+        aimbotLocked=nil
+    end
+end)
+
 createSection("Combat","GUN MODS")
 
-local silentAimOn=false
-createToggle("Combat","Silent Aim","Peluru mengarah ke target terdekat",function(s) silentAimOn=s end)
+-- ================================================
+-- SILENT AIM UNIVERSAL SYSTEM
+-- ================================================
+local silentAimOn = false
+local silentAimFOV = 120
+local silentAimTarget = nil
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+-- FOV Circle Visual
+local fovCircle = nil
+pcall(function()
+    fovCircle = Drawing.new("Circle")
+    fovCircle.Visible = false
+    fovCircle.Thickness = 1.5
+    fovCircle.Color = C.neon
+    fovCircle.Transparency = 0.6
+    fovCircle.Filled = false
+    fovCircle.NumSides = 64
+    fovCircle.Radius = silentAimFOV
+    fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+end)
+
+-- Cari target terdekat dari pusat layar dalam FOV
+local function getClosestTarget()
+    local vp = Camera.ViewportSize
+    local center = Vector2.new(vp.X/2, vp.Y/2)
+    local closest, closestDist = nil, silentAimFOV
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local head = p.Character:FindFirstChild("Head")
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            local aim = head or hrp
+            if aim and hum and hum.Health > 0 then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(aim.Position)
+                if onScreen then
+                    local dist2D = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                    if dist2D < closestDist then
+                        closestDist = dist2D
+                        closest = aim
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- Hook metatable (executor env) atau fallback camera lerp
+local mouseHookActive = false
+local function applyMouseHook()
+    if mouseHookActive then return end
+    mouseHookActive = true
+    local ok = pcall(function()
+        local mt = getrawmetatable(game)
+        local oldIndex = mt.__index
+        setreadonly(mt, false)
+        mt.__index = newcclosure(function(self, key)
+            if silentAimOn and self == LocalPlayer:GetMouse() then
+                local t = getClosestTarget()
+                silentAimTarget = t
+                if t then
+                    if key == "Hit" then return CFrame.new(t.Position)
+                    elseif key == "Target" then return t end
+                end
+            end
+            return oldIndex(self, key)
+        end)
+        setreadonly(mt, true)
+    end)
+    if not ok then
+        -- Fallback: camera snap per-frame (works tanpa full executor)
+        RunService.RenderStepped:Connect(function()
+            if not silentAimOn then silentAimTarget = nil return end
+            local t = getClosestTarget()
+            silentAimTarget = t
+            if t then
+                local cf = Camera.CFrame
+                Camera.CFrame = cf:Lerp(CFrame.lookAt(cf.Position, t.Position), 0.35)
+            end
+        end)
+    end
+end
+
+-- Update FOV circle & target lock per frame
+RunService.RenderStepped:Connect(function()
+    if fovCircle then
+        pcall(function()
+            local vp = Camera.ViewportSize
+            fovCircle.Position = Vector2.new(vp.X/2, vp.Y/2)
+            fovCircle.Radius = silentAimFOV
+            fovCircle.Color = C.neon
+            fovCircle.Visible = silentAimOn
+        end)
+    end
+    if silentAimOn then
+        silentAimTarget = getClosestTarget()
+    end
+end)
+
+createToggle("Combat","Silent Aim","Universal: Mouse & Mobile + FOV circle",function(s)
+    silentAimOn = s
+    if s then applyMouseHook() end
+    if fovCircle then pcall(function() fovCircle.Visible = s end) end
+end)
+
+-- FOV Slider
+do
+    local sliderRow=Instance.new("Frame")
+    sliderRow.Size=UDim2.new(1,0,0,48)
+    sliderRow.BackgroundColor3=C.bg2 sliderRow.BorderSizePixel=0
+    sliderRow.Parent=TabPages["Combat"]
+    local src=Instance.new("UICorner") src.CornerRadius=UDim.new(0,10) src.Parent=sliderRow
+    local srs=Instance.new("UIStroke") srs.Color=C.neonDim srs.Thickness=0.8 srs.Parent=sliderRow
+    local slbl=Instance.new("TextLabel")
+    slbl.Size=UDim2.new(1,-10,0,18) slbl.Position=UDim2.new(0,12,0,4)
+    slbl.BackgroundTransparency=1 slbl.Text="FOV Radius: 120 px"
+    slbl.TextColor3=C.text slbl.TextSize=12
+    slbl.Font=Enum.Font.GothamBold slbl.TextXAlignment=Enum.TextXAlignment.Left
+    slbl.Parent=sliderRow
+    local track=Instance.new("Frame")
+    track.Size=UDim2.new(1,-24,0,6) track.Position=UDim2.new(0,12,0,32)
+    track.BackgroundColor3=C.bg3 track.BorderSizePixel=0 track.Parent=sliderRow
+    local trc=Instance.new("UICorner") trc.CornerRadius=UDim.new(1,0) trc.Parent=track
+    local fill=Instance.new("Frame")
+    fill.Size=UDim2.new(0.4,0,1,0) fill.BackgroundColor3=C.neon
+    fill.BorderSizePixel=0 fill.Parent=track
+    local frc=Instance.new("UICorner") frc.CornerRadius=UDim.new(1,0) frc.Parent=fill
+    local thumb=Instance.new("TextButton")
+    thumb.Size=UDim2.new(0,14,0,14) thumb.AnchorPoint=Vector2.new(0.5,0.5)
+    thumb.Position=UDim2.new(0.4,0,0.5,0)
+    thumb.BackgroundColor3=C.neonGlow thumb.Text="" thumb.BorderSizePixel=0
+    thumb.Parent=track
+    local tbc2=Instance.new("UICorner") tbc2.CornerRadius=UDim.new(1,0) tbc2.Parent=thumb
+    -- FOV range: 40 - 300
+    local minFOV,maxFOV=40,300
+    local function updateFOV(pct)
+        pct=math.clamp(pct,0,1)
+        silentAimFOV=math.floor(minFOV+(maxFOV-minFOV)*pct)
+        fill.Size=UDim2.new(pct,0,1,0)
+        thumb.Position=UDim2.new(pct,0,0.5,0)
+        slbl.Text="FOV Radius: "..silentAimFOV.." px"
+    end
+    local dragging=false
+    local function onInput(x)
+        local abs=track.AbsolutePosition.X
+        local w=track.AbsoluteSize.X
+        updateFOV((x-abs)/w)
+    end
+    thumb.MouseButton1Down:Connect(function() dragging=true end)
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType==Enum.UserInputType.MouseMovement then
+            onInput(i.Position.X)
+        end
+        if dragging and i.UserInputType==Enum.UserInputType.Touch then
+            onInput(i.Position.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+            dragging=false
+        end
+    end)
+    -- Mobile touch on track
+    track.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.Touch then
+            dragging=true onInput(i.Position.X)
+        end
+    end)
+    updateFOV(0.4)
+end
 
 local infAmmoOn=false
 createToggle("Combat","Infinite Ammo","Ammo tidak habis",function(s) infAmmoOn=s end)
@@ -463,6 +807,41 @@ createSection("Combat","HITBOX")
 
 local hitboxOn=false
 createToggle("Combat","Hitbox Expander","Perbesar hitbox player lain",function(s) hitboxOn=s end)
+
+-- Kill Aura
+local killAuraOn=false
+local killAuraRadius=20
+createToggle("Combat","Kill Aura","Auto hit player dalam radius",function(s) killAuraOn=s end)
+
+-- Auto Parry / Block
+local autoParryOn=false
+createToggle("Combat","Auto Parry","Auto block saat HP berkurang",function(s) autoParryOn=s end)
+local lastHp=100
+task.spawn(function()
+    while task.wait(0.05) do
+        if autoParryOn and Character then
+            local hum=Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if hum.Health < lastHp then
+                    -- Trigger block: cari tool dan simulasikan secondary activate
+                    local tool=Character:FindFirstChildOfClass("Tool")
+                    if tool then
+                        local ok=pcall(function()
+                            if tool:FindFirstChild("RemoteEvent") then
+                                tool.RemoteEvent:FireServer("block",true)
+                            end
+                        end)
+                        -- Fallback: set HumanoidStateType
+                        if not ok then
+                            hum:ChangeState(Enum.HumanoidStateType.Running)
+                        end
+                    end
+                end
+                lastHp=hum.Health
+            end
+        end
+    end
+end)
 
 -- Combat logic loop
 RunService.Heartbeat:Connect(function()
@@ -494,6 +873,32 @@ RunService.Heartbeat:Connect(function()
             end
         end
     end
+    -- Kill Aura
+    if killAuraOn then
+        local root=Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p~=LocalPlayer and p.Character then
+                    local hrp=p.Character:FindFirstChild("HumanoidRootPart")
+                    local hum=p.Character:FindFirstChildOfClass("Humanoid")
+                    if hrp and hum and hum.Health>0 then
+                        local dist=(hrp.Position-root.Position).Magnitude
+                        if dist<=killAuraRadius then
+                            pcall(function() hum:TakeDamage(10) end)
+                            -- Coba tool juga
+                            local tool=Character:FindFirstChildOfClass("Tool")
+                            if tool and tool:FindFirstChild("Handle") then
+                                pcall(function()
+                                    tool:Activate()
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     -- Hitbox
     local hitboxActive = hitboxOn or combatTestEnabled.HitboxTest
     for _,p in ipairs(Players:GetPlayers()) do
@@ -513,29 +918,26 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Silent aim hook
+-- Silent aim hook (PC + Mobile)
+-- Logic utama ada di metatable hook / RenderStepped di atas
+-- hookTool hanya handle snap saat Activated jika metatable tidak tersedia
 local function hookTool(tool)
+    -- PC: hook Activated
     tool.Activated:Connect(function()
         if not silentAimOn then return end
-        local closest,minD=nil,150
-        if not RootPart then return end
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p~=LocalPlayer and p.Character then
-                local hrp=p.Character:FindFirstChild("HumanoidRootPart")
-                local h=p.Character:FindFirstChildOfClass("Humanoid")
-                if hrp and h and h.Health>0 then
-                    local d=(hrp.Position-RootPart.Position).Magnitude
-                    if d<minD then minD=d closest=hrp end
-                end
-            end
-        end
-        if closest then
-            local orig=Camera.CFrame
-            Camera.CFrame=CFrame.lookAt(Camera.CFrame.Position,closest.Position)
-            task.wait(0.07)
-            Camera.CFrame=orig
+        local t = silentAimTarget or getClosestTarget()
+        if t and Camera then
+            local cf = Camera.CFrame
+            Camera.CFrame = CFrame.lookAt(cf.Position, t.Position)
         end
     end)
+    -- Mobile: hook TouchTap pada tool handle jika ada
+    if isMobile then
+        local handle = tool:FindFirstChild("Handle")
+        if handle then
+            handle.Touched:Connect(function() end) -- dummy to ensure it loads
+        end
+    end
 end
 
 if Character then
@@ -657,17 +1059,111 @@ createToggle("Visual","FPS Booster","Matikan efek berat",function(s)
     end
 end)
 
+-- Crosshair custom (Drawing API)
+local crosshairOn=false
+local crosshairLines={}
+local function buildCrosshair()
+    for _,l in ipairs(crosshairLines) do pcall(function() l:Remove() end) end
+    crosshairLines={}
+    pcall(function()
+        local vp=Camera.ViewportSize
+        local cx,cy=vp.X/2,vp.Y/2
+        local gap,len,thick=6,8,1.5
+        local dirs={{Vector2.new(-gap-len,0),Vector2.new(-gap,0)},{Vector2.new(gap,0),Vector2.new(gap+len,0)},{Vector2.new(0,-gap-len),Vector2.new(0,-gap)},{Vector2.new(0,gap),Vector2.new(0,gap+len)}}
+        for _,d in ipairs(dirs) do
+            local l=Drawing.new("Line")
+            l.From=Vector2.new(cx+d[1].X,cy+d[1].Y)
+            l.To=Vector2.new(cx+d[2].X,cy+d[2].Y)
+            l.Color=C.neonGlow l.Thickness=thick l.Transparency=0 l.Visible=true
+            table.insert(crosshairLines,l)
+        end
+        -- dot tengah
+        local dot=Drawing.new("Circle")
+        dot.Position=Vector2.new(cx,cy) dot.Radius=1.5
+        dot.Color=C.neonGlow dot.Filled=true dot.Thickness=1 dot.Visible=true
+        table.insert(crosshairLines,dot)
+    end)
+end
+createToggle("Visual","Custom Crosshair","Dot+cross via Drawing API",function(s)
+    crosshairOn=s
+    if s then buildCrosshair()
+    else for _,l in ipairs(crosshairLines) do pcall(function() l:Remove() end) end crosshairLines={} end
+end)
+
+-- Radar mini-map (Drawing API)
+local radarOn=false
+local radarDots={}
+local radarFrame -- Drawing circle background
+createToggle("Visual","Radar Mini-Map","Posisi player di sudut layar",function(s)
+    radarOn=s
+    if not s then
+        for _,d in pairs(radarDots) do pcall(function() for _,v in pairs(d) do v:Remove() end end) end
+        radarDots={}
+        if radarFrame then pcall(function() radarFrame:Remove() end) radarFrame=nil end
+    else
+        pcall(function()
+            radarFrame=Drawing.new("Circle")
+            radarFrame.Position=Vector2.new(Camera.ViewportSize.X-90,Camera.ViewportSize.Y-90)
+            radarFrame.Radius=70 radarFrame.Color=Color3.fromRGB(10,8,20)
+            radarFrame.Filled=true radarFrame.Transparency=0.4 radarFrame.Thickness=1.5
+            radarFrame.Visible=true
+        end)
+    end
+end)
+
 -- Visual update loop
 RunService.RenderStepped:Connect(function()
-    -- ESP distance update
+    -- ESP distance + health color update
     if espOn and RootPart and RootPart.Parent then
         for player,obj in pairs(espObjects) do
             local char=player.Character
             local hrp=char and char:FindFirstChild("HumanoidRootPart")
+            local hum=char and char:FindFirstChildOfClass("Humanoid")
             if hrp and obj.dl then
                 obj.dl.Text=math.floor((hrp.Position-RootPart.Position).Magnitude).." studs"
             end
+            -- Warna nama berdasarkan health
+            if hum and obj.hl then
+                local hp=hum.Health/hum.MaxHealth
+                local r=math.floor(255*(1-hp)) local g=math.floor(255*hp)
+                if obj.hl then obj.hl.OutlineColor=Color3.fromRGB(r,g,0) end
+            end
         end
+    end
+
+    -- Radar update
+    if radarOn and RootPart and RootPart.Parent then
+        local vp=Camera.ViewportSize
+        local cx,cy=vp.X-90,vp.Y-90
+        local radarRadius=65
+        local worldRadius=200
+        -- clear old dots
+        for _,d in pairs(radarDots) do pcall(function() for _,v in pairs(d) do v:Remove() end end) end
+        radarDots={}
+        pcall(function()
+            if radarFrame then radarFrame.Position=Vector2.new(cx,cy) end
+            local myPos=RootPart.Position
+            local myCF=RootPart.CFrame
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p~=LocalPlayer and p.Character then
+                    local hrp=p.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local rel=myCF:PointToObjectSpace(hrp.Position)
+                        local rx=math.clamp(rel.X/worldRadius,-1,1)*radarRadius
+                        local ry=math.clamp(-rel.Z/worldRadius,-1,1)*radarRadius
+                        local dot=Drawing.new("Circle")
+                        dot.Position=Vector2.new(cx+rx,cy+ry)
+                        dot.Radius=4 dot.Color=C.neon
+                        dot.Filled=true dot.Thickness=1 dot.Visible=true
+                        local lbl=Drawing.new("Text")
+                        lbl.Position=Vector2.new(cx+rx+5,cy+ry-5)
+                        lbl.Text=p.Name:sub(1,6) lbl.Size=10
+                        lbl.Color=C.text lbl.Visible=true
+                        radarDots[p]={dot,lbl}
+                    end
+                end
+            end
+        end)
     end
 
     -- Chams
@@ -901,6 +1397,105 @@ task.spawn(function()
             end
         end
     end
+end)
+
+-- Loop Teleport
+createSection("Utility","LOOP TELEPORT")
+local loopTpFrame=Instance.new("Frame")
+loopTpFrame.Size=UDim2.new(1,0,0,42) loopTpFrame.BackgroundColor3=C.bg2
+loopTpFrame.BorderSizePixel=0 loopTpFrame.Parent=TabPages["Utility"]
+local lFC=Instance.new("UICorner") lFC.CornerRadius=UDim.new(0,10) lFC.Parent=loopTpFrame
+local lFS=Instance.new("UIStroke") lFS.Color=C.neonDim lFS.Thickness=0.8 lFS.Parent=loopTpFrame
+local loopTpBox=Instance.new("TextBox")
+loopTpBox.Size=UDim2.new(0.58,-8,1,-12) loopTpBox.Position=UDim2.new(0,8,0,6)
+loopTpBox.BackgroundColor3=C.bg loopTpBox.Text="" loopTpBox.PlaceholderText="Nama player..."
+loopTpBox.TextColor3=C.text loopTpBox.PlaceholderColor3=C.textDim
+loopTpBox.TextSize=12 loopTpBox.Font=Enum.Font.Gotham
+loopTpBox.BorderSizePixel=0 loopTpBox.ClearTextOnFocus=false loopTpBox.Parent=loopTpFrame
+local lBC=Instance.new("UICorner") lBC.CornerRadius=UDim.new(0,6) lBC.Parent=loopTpBox
+createToggle("Utility","Loop TP","Teleport terus ke target",function(s)
+    _G.LoopTpOn=s
+end)
+_G.LoopTpOn=false
+task.spawn(function()
+    while task.wait(0.3) do
+        if _G.LoopTpOn then
+            local name=loopTpBox.Text:lower()
+            if name~="" then
+                for _,p in ipairs(Players:GetPlayers()) do
+                    if p.Name:lower():find(name) and p~=LocalPlayer then
+                        local hrp=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                        local rp=Character and Character:FindFirstChild("HumanoidRootPart")
+                        if hrp and rp then rp.CFrame=hrp.CFrame+Vector3.new(0,3,0) end
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Chat Spammer
+createSection("Utility","CHAT SPAMMER")
+local chatFrame=Instance.new("Frame")
+chatFrame.Size=UDim2.new(1,0,0,42) chatFrame.BackgroundColor3=C.bg2
+chatFrame.BorderSizePixel=0 chatFrame.Parent=TabPages["Utility"]
+local cFC2=Instance.new("UICorner") cFC2.CornerRadius=UDim.new(0,10) cFC2.Parent=chatFrame
+local cFS2=Instance.new("UIStroke") cFS2.Color=C.neonDim cFS2.Thickness=0.8 cFS2.Parent=chatFrame
+local chatMsgBox=Instance.new("TextBox")
+chatMsgBox.Size=UDim2.new(1,-16,1,-12) chatMsgBox.Position=UDim2.new(0,8,0,6)
+chatMsgBox.BackgroundColor3=C.bg chatMsgBox.Text="" chatMsgBox.PlaceholderText="Pesan spam..."
+chatMsgBox.TextColor3=C.text chatMsgBox.PlaceholderColor3=C.textDim
+chatMsgBox.TextSize=12 chatMsgBox.Font=Enum.Font.Gotham
+chatMsgBox.BorderSizePixel=0 chatMsgBox.ClearTextOnFocus=false chatMsgBox.Parent=chatFrame
+local cBC2=Instance.new("UICorner") cBC2.CornerRadius=UDim.new(0,6) cBC2.Parent=chatMsgBox
+createToggle("Utility","Chat Spam","Kirim pesan otomatis tiap 2 detik",function(s) _G.ChatSpam=s end)
+_G.ChatSpam=false
+task.spawn(function()
+    while task.wait(2) do
+        if _G.ChatSpam and chatMsgBox.Text~="" then
+            pcall(function()
+                game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+                    :FindFirstChild("SayMessageRequest"):FireServer(chatMsgBox.Text,"All")
+            end)
+        end
+    end
+end)
+
+-- Server Hop
+createSection("Utility","SERVER HOP")
+local SHBtn=Instance.new("TextButton")
+SHBtn.Size=UDim2.new(1,0,0,32) SHBtn.BackgroundColor3=C.bg3
+SHBtn.Text="🔀 Server Hop (Rejoin Random)" SHBtn.TextColor3=C.neonGlow
+SHBtn.TextSize=11 SHBtn.Font=Enum.Font.GothamBold SHBtn.BorderSizePixel=0
+SHBtn.Parent=TabPages["Utility"]
+local SHBC=Instance.new("UICorner") SHBC.CornerRadius=UDim.new(0,8) SHBC.Parent=SHBtn
+SHBtn.MouseButton1Click:Connect(function()
+    showToast("Server Hopping...",true)
+    task.wait(0.5)
+    pcall(function()
+        local TS=game:GetService("TeleportService")
+        local servers={}
+        local ok,pages=pcall(function()
+            return TS:GetPlayerPlaceInstancesAsync(game.PlaceId)
+        end)
+        if ok and pages then
+            for _,s in ipairs(pages:GetCurrentPage()) do
+                if s.CurrentPlayers < s.MaxPlayers then
+                    table.insert(servers,s)
+                end
+            end
+            if #servers>0 then
+                local pick=servers[math.random(1,#servers)]
+                TS:TeleportToPlaceInstance(game.PlaceId,pick.JobId,LocalPlayer)
+            else
+                -- Fallback: rejoin same game
+                TS:Teleport(game.PlaceId,LocalPlayer)
+            end
+        else
+            TS:Teleport(game.PlaceId,LocalPlayer)
+        end
+    end)
 end)
 
 -- ================================================
@@ -1178,6 +1773,11 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     RootPart=newChar:WaitForChild("HumanoidRootPart")
     newChar.ChildAdded:Connect(function(c) if c:IsA("Tool") then hookTool(c) end end)
     if chamsOn then chamsObjects={} end
+    -- Restart fly jika sedang aktif saat respawn
+    if flyOn then
+        task.wait(0.5) -- tunggu character fully loaded
+        startFly()
+    end
 end)
 
 -- ================================================
@@ -1199,11 +1799,111 @@ UserInputService.InputBegan:Connect(function(input,gp)
     end
 end)
 
+-- ================================================
+-- CONFIG SAVE / LOAD
+-- ================================================
+createSection("Extra","CONFIG")
+
+local function saveConfig()
+    local cfg={}
+    for k,v in pairs(_G.VeronConfig) do cfg[k]=v end
+    local str=""
+    for k,v in pairs(cfg) do
+        str=str..tostring(k).."="..tostring(v).."\n"
+    end
+    pcall(function() writefile("VeronConfig.txt",str) end)
+    showToast("Config disimpan",true)
+end
+
+local function loadConfig()
+    pcall(function()
+        local str=readfile("VeronConfig.txt")
+        for line in str:gmatch("[^\n]+") do
+            local k,v=line:match("(.+)=(.+)")
+            if k and v then
+                if v=="true" then _G.VeronConfig[k]=true
+                elseif v=="false" then _G.VeronConfig[k]=false
+                else _G.VeronConfig[k]=v end
+            end
+        end
+        showToast("Config di-load",true)
+    end)
+end
+
+local cfgRow=Instance.new("Frame")
+cfgRow.Size=UDim2.new(1,0,0,36) cfgRow.BackgroundTransparency=1 cfgRow.Parent=TabPages["Extra"]
+local cfgLL=Instance.new("UIListLayout") cfgLL.FillDirection=Enum.FillDirection.Horizontal cfgLL.Padding=UDim.new(0,8) cfgLL.Parent=cfgRow
+local SaveBtn=Instance.new("TextButton")
+SaveBtn.Size=UDim2.new(0.5,-4,1,0) SaveBtn.BackgroundColor3=C.neonDim
+SaveBtn.Text="💾 Save Config" SaveBtn.TextColor3=C.neonGlow
+SaveBtn.TextSize=11 SaveBtn.Font=Enum.Font.GothamBold SaveBtn.BorderSizePixel=0 SaveBtn.Parent=cfgRow
+local SBC2=Instance.new("UICorner") SBC2.CornerRadius=UDim.new(0,8) SBC2.Parent=SaveBtn
+local LoadBtn=Instance.new("TextButton")
+LoadBtn.Size=UDim2.new(0.5,-4,1,0) LoadBtn.BackgroundColor3=C.bg3
+LoadBtn.Text="📂 Load Config" LoadBtn.TextColor3=C.neonGlow
+LoadBtn.TextSize=11 LoadBtn.Font=Enum.Font.GothamBold LoadBtn.BorderSizePixel=0 LoadBtn.Parent=cfgRow
+local LBC2=Instance.new("UICorner") LBC2.CornerRadius=UDim.new(0,8) LBC2.Parent=LoadBtn
+SaveBtn.MouseButton1Click:Connect(saveConfig)
+LoadBtn.MouseButton1Click:Connect(loadConfig)
+
+-- ================================================
+-- DISCORD WEBHOOK LOGGER
+-- ================================================
+createSection("Extra","DISCORD WEBHOOK")
+
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1548440747714289826/x1ukko9NJb9MJle61z51ive78eg5ZtsaYNjmdPJLWLFm4yU2wGxgcsnTxMfP5w3qMCMb"
+
+local function sendWebhook(content)
+    pcall(function()
+        local HttpService=game:GetService("HttpService")
+        local body=HttpService:JSONEncode({
+            username="Veron Hub",
+            embeds={{
+                title="📡 Veron Hub Logger",
+                color=7077887,
+                fields={
+                    {name="Player",value=LocalPlayer.Name.." ("..LocalPlayer.UserId..")",inline=true},
+                    {name="Game",value=game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,inline=true},
+                    {name="Server",value=game.JobId,inline=false},
+                    {name="Log",value=content,inline=false},
+                },
+                footer={text="Veron Hub v3.3 • "..os.date("%Y-%m-%d %H:%M:%S")},
+            }}
+        })
+        HttpService:PostAsync(WEBHOOK_URL,body,Enum.HttpContentType.ApplicationJson)
+    end)
+end
+
+-- Toggle log chat ke webhook
+createToggle("Extra","Log Chat → Webhook","Kirim chat ke Discord webhook",function(s) _G.WebhookChat=s end)
+_G.WebhookChat=false
+
+-- Intercept logChat yang sudah ada untuk juga kirim ke webhook
+local origLogChat=logChat
+logChat=function(player,msg)
+    origLogChat(player,msg)
+    if _G.WebhookChat then
+        sendWebhook(player.Name..": "..msg)
+    end
+end
+
+local testWH=Instance.new("TextButton")
+testWH.Size=UDim2.new(1,0,0,28) testWH.BackgroundColor3=C.bg3
+testWH.Text="📤 Test Webhook" testWH.TextColor3=C.neonGlow
+testWH.TextSize=11 testWH.Font=Enum.Font.GothamBold testWH.BorderSizePixel=0
+testWH.Parent=TabPages["Extra"]
+local tWHC=Instance.new("UICorner") tWHC.CornerRadius=UDim.new(0,8) tWHC.Parent=testWH
+testWH.MouseButton1Click:Connect(function()
+    sendWebhook("✅ Test webhook dari Veron Hub v3.2 — server: "..game.JobId)
+    showToast("Webhook terkirim",true)
+end)
+
 -- Combat test state for game-owned/admin systems.
 _G.VeronCombatTest = combatTestEnabled
 
 -- ================================================
-print("✅ Veron Hub v3.2 | Made by Veron")
+print("✅ Veron Hub v3.3 | Made by Veron")
 print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
-print("   v3.1: stable UI + player search + FPS + theme refresh")
+print("   v3.3: +KillAura +AutoParry +AimbotLock +Blink +TPCursor +SpeedSlider")
+print("         +HealthESP +Crosshair +Radar +LoopTP +ChatSpam +ServerHop +Config +Webhook")
 -- ================================================
