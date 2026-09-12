@@ -1070,6 +1070,5 @@ end)
 print("✅ Veron Hub v3.0 | Made by Veron")
 print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
 -- ================================================
-ENDOFSCRIPT
-echo "Done: $(wc -l < /mnt/user-data/outputs/GuiHub.lua) lines"
+
 
