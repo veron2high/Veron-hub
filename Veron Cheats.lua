@@ -88,274 +88,143 @@ applyTheme(currentTheme)
 -- ================================================
 -- KEY SYSTEM
 -- ================================================
-
--- ⚙️ CONFIG KEY — ganti sesuai keinginan
 local VALID_KEYS = {
-    ["VERON-2024-ALPHA"] = 24,   -- berlaku 24 jam
-    ["VERON-VIP-7DAY"]  = 168,   -- berlaku 7 hari (168 jam)
-    ["VERON-PERM-9999"]  = 99999, -- practically permanent
+    ["VERON-2024-ALPHA"] = 24,
+    ["VERON-VIP-7DAY"]  = 168,
+    ["VERON-PERM-9999"] = 99999,
 }
 
--- Simpan key yang sudah diinput via _G agar tidak perlu input ulang tiap inject
--- Format: _G.VeronKey = {key="...", expireAt=tick()+detik}
-local keyUnlocked = false
-local function checkStoredKey()
-    local stored = _G.VeronKey
-    if type(stored) == "table" and stored.key and stored.expireAt then
-        if tick() < stored.expireAt and VALID_KEYS[stored.key] then
-            keyUnlocked = true
-            return true
-        end
+-- Cek key tersimpan di _G
+local function isKeyValid()
+    local s = _G.VeronKey
+    if type(s)=="table" and s.expireAt and s.key and VALID_KEYS[s.key] then
+        return tick() < s.expireAt
     end
     return false
 end
 
-if not checkStoredKey() then
-    -- Belum ada key valid, tampilkan UI key screen
-    local KeyGui = Instance.new("ScreenGui")
-    KeyGui.Name = "VeronKeyScreen"
-    KeyGui.ResetOnSpawn = false
-    KeyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    pcall(function()
-        if typeof(gethui)=="function" then KeyGui.Parent=gethui()
-        else KeyGui.Parent=game.CoreGui end
-    end)
-    if not KeyGui.Parent then KeyGui.Parent = game.CoreGui end
+if not isKeyValid() then
+    -- Buat ScreenGui key — parent ke PlayerGui (paling compatible)
+    local KG = Instance.new("ScreenGui")
+    KG.Name = "VeronKey"
+    KG.ResetOnSpawn = false
+    KG.DisplayOrder = 999
+    KG.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
-    -- Fullscreen blur background
-    local Blur = Instance.new("Frame")
-    Blur.Size = UDim2.new(1,0,1,0)
-    Blur.BackgroundColor3 = Color3.fromRGB(5,3,12)
-    Blur.BackgroundTransparency = 0.08
-    Blur.BorderSizePixel = 0
-    Blur.ZIndex = 10
-    Blur.Parent = KeyGui
+    -- Background gelap
+    local BG = Instance.new("Frame")
+    BG.Size = UDim2.new(1,0,1,0)
+    BG.BackgroundColor3 = Color3.fromRGB(5,3,12)
+    BG.BorderSizePixel = 0
+    BG.Parent = KG
 
-    -- Particle effect (fake scanlines)
-    for i=1,20 do
-        local line = Instance.new("Frame")
-        line.Size = UDim2.new(1,0,0,1)
-        line.Position = UDim2.new(0,0,i/20,0)
-        line.BackgroundColor3 = C.neon
-        line.BackgroundTransparency = 0.92
-        line.BorderSizePixel = 0
-        line.ZIndex = 11
-        line.Parent = Blur
+    -- Card
+    local CD = Instance.new("Frame")
+    CD.Size = UDim2.new(0,320,0,280)
+    CD.Position = UDim2.new(0.5,-160,0.5,-140)
+    CD.BackgroundColor3 = Color3.fromRGB(12,8,28)
+    CD.BorderSizePixel = 0
+    CD.Parent = KG
+    Instance.new("UICorner").CornerRadius = UDim.new(0,14)
+    Instance.new("UICorner", CD).CornerRadius = UDim.new(0,14)
+    local cdStroke = Instance.new("UIStroke", CD)
+    cdStroke.Color = C.neon
+    cdStroke.Thickness = 1.5
+
+    local function lbl(text, y, size, color)
+        local l = Instance.new("TextLabel", CD)
+        l.Size = UDim2.new(1,-20,0,30)
+        l.Position = UDim2.new(0,10,0,y)
+        l.BackgroundTransparency = 1
+        l.Text = text
+        l.TextColor3 = color or C.text
+        l.TextSize = size or 13
+        l.Font = Enum.Font.GothamBold
+        return l
     end
 
-    -- Card utama
-    local Card = Instance.new("Frame")
-    Card.Size = UDim2.new(0,360,0,420)
-    Card.Position = UDim2.new(0.5,-180,0.5,-210)
-    Card.BackgroundColor3 = Color3.fromRGB(10,8,22)
-    Card.BorderSizePixel = 0
-    Card.ZIndex = 12
-    Card.Parent = KeyGui
-    local CardC = Instance.new("UICorner") CardC.CornerRadius = UDim.new(0,18) CardC.Parent = Card
-    local CardS = Instance.new("UIStroke") CardS.Color = C.neon CardS.Thickness = 1.5 CardS.Parent = Card
+    lbl("⚡ VERON HUB", 18, 22, C.neonGlow)
+    lbl("Masukkan key aktivasi", 56, 11, C.textDim)
 
-    -- Glow border effect
-    local CardGlow = Instance.new("Frame")
-    CardGlow.Size = UDim2.new(1,12,1,12)
-    CardGlow.Position = UDim2.new(0,-6,0,-6)
-    CardGlow.BackgroundColor3 = C.neon
-    CardGlow.BackgroundTransparency = 0.82
-    CardGlow.BorderSizePixel = 0
-    CardGlow.ZIndex = 11
-    CardGlow.Parent = Card
-    local CGC = Instance.new("UICorner") CGC.CornerRadius = UDim.new(0,22) CGC.Parent = CardGlow
+    -- Input
+    local inp = Instance.new("TextBox", CD)
+    inp.Size = UDim2.new(1,-20,0,38)
+    inp.Position = UDim2.new(0,10,0,90)
+    inp.BackgroundColor3 = Color3.fromRGB(18,12,40)
+    inp.BorderSizePixel = 0
+    inp.Text = ""
+    inp.PlaceholderText = "Ketik key disini..."
+    inp.TextColor3 = C.neonGlow
+    inp.PlaceholderColor3 = C.textDim
+    inp.TextSize = 12
+    inp.Font = Enum.Font.GothamBold
+    inp.ClearTextOnFocus = false
+    Instance.new("UICorner", inp).CornerRadius = UDim.new(0,8)
+    Instance.new("UIStroke", inp).Color = C.neonDim
+    local inpPad = Instance.new("UIPadding", inp)
+    inpPad.PaddingLeft = UDim.new(0,8)
 
-    -- Logo / judul
-    local Logo = Instance.new("TextLabel")
-    Logo.Size = UDim2.new(1,0,0,60)
-    Logo.Position = UDim2.new(0,0,0,28)
-    Logo.BackgroundTransparency = 1
-    Logo.Text = "⚡ VERON HUB"
-    Logo.TextColor3 = C.neonGlow
-    Logo.TextSize = 30
-    Logo.Font = Enum.Font.GothamBold
-    Logo.ZIndex = 13
-    Logo.Parent = Card
+    -- Status
+    local stat = lbl("", 138, 11, C.red)
 
-    local Version = Instance.new("TextLabel")
-    Version.Size = UDim2.new(1,0,0,20)
-    Version.Position = UDim2.new(0,0,0,86)
-    Version.BackgroundTransparency = 1
-    Version.Text = "v3.4  •  Key Authentication"
-    Version.TextColor3 = C.textDim
-    Version.TextSize = 11
-    Version.Font = Enum.Font.Gotham
-    Version.ZIndex = 13
-    Version.Parent = Card
+    -- Tombol
+    local btn = Instance.new("TextButton", CD)
+    btn.Size = UDim2.new(1,-20,0,40)
+    btn.Position = UDim2.new(0,10,0,162)
+    btn.BackgroundColor3 = C.neonDim
+    btn.Text = "🔓 AKTIVASI"
+    btn.TextColor3 = C.neonGlow
+    btn.TextSize = 13
+    btn.Font = Enum.Font.GothamBold
+    btn.BorderSizePixel = 0
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
 
-    -- Divider
-    local Div = Instance.new("Frame")
-    Div.Size = UDim2.new(0.8,0,0,1)
-    Div.Position = UDim2.new(0.1,0,0,118)
-    Div.BackgroundColor3 = C.neonDim
-    Div.BorderSizePixel = 0
-    Div.ZIndex = 13
-    Div.Parent = Card
+    local info = lbl("", 212, 10, C.textDim)
+    info.Text = "Key expire sesuai durasi. Hubungi Veron untuk key."
 
-    -- Label instruksi
-    local InstrLbl = Instance.new("TextLabel")
-    InstrLbl.Size = UDim2.new(0.9,0,0,36)
-    InstrLbl.Position = UDim2.new(0.05,0,0,128)
-    InstrLbl.BackgroundTransparency = 1
-    InstrLbl.Text = "Masukkan key aktivasi untuk melanjutkan.\nKey bisa didapat dari grup / discord Veron."
-    InstrLbl.TextColor3 = C.textDim
-    InstrLbl.TextSize = 11
-    InstrLbl.Font = Enum.Font.Gotham
-    InstrLbl.TextWrapped = true
-    InstrLbl.ZIndex = 13
-    InstrLbl.Parent = Card
-
-    -- Input box
-    local InputFrame = Instance.new("Frame")
-    InputFrame.Size = UDim2.new(0.88,0,0,44)
-    InputFrame.Position = UDim2.new(0.06,0,0,182)
-    InputFrame.BackgroundColor3 = Color3.fromRGB(18,14,38)
-    InputFrame.BorderSizePixel = 0
-    InputFrame.ZIndex = 13
-    InputFrame.Parent = Card
-    local IFC = Instance.new("UICorner") IFC.CornerRadius = UDim.new(0,10) IFC.Parent = InputFrame
-    local IFS = Instance.new("UIStroke") IFS.Color = C.neonDim IFS.Thickness = 1 IFS.Parent = InputFrame
-
-    local KeyInput = Instance.new("TextBox")
-    KeyInput.Size = UDim2.new(1,-16,1,0)
-    KeyInput.Position = UDim2.new(0,8,0,0)
-    KeyInput.BackgroundTransparency = 1
-    KeyInput.Text = ""
-    KeyInput.PlaceholderText = "Masukkan key disini..."
-    KeyInput.TextColor3 = C.neonGlow
-    KeyInput.PlaceholderColor3 = C.textDim
-    KeyInput.TextSize = 13
-    KeyInput.Font = Enum.Font.GothamBold
-    KeyInput.TextXAlignment = Enum.TextXAlignment.Left
-    KeyInput.ClearTextOnFocus = false
-    KeyInput.ZIndex = 14
-    KeyInput.Parent = InputFrame
-    local KIPad = Instance.new("UIPadding") KIPad.PaddingLeft = UDim.new(0,4) KIPad.Parent = KeyInput
-
-    -- Status label
-    local StatusLbl = Instance.new("TextLabel")
-    StatusLbl.Size = UDim2.new(0.88,0,0,22)
-    StatusLbl.Position = UDim2.new(0.06,0,0,232)
-    StatusLbl.BackgroundTransparency = 1
-    StatusLbl.Text = ""
-    StatusLbl.TextColor3 = C.red
-    StatusLbl.TextSize = 11
-    StatusLbl.Font = Enum.Font.Gotham
-    StatusLbl.ZIndex = 13
-    StatusLbl.Parent = Card
-
-    -- Tombol Submit
-    local SubmitBtn = Instance.new("TextButton")
-    SubmitBtn.Size = UDim2.new(0.88,0,0,42)
-    SubmitBtn.Position = UDim2.new(0.06,0,0,260)
-    SubmitBtn.BackgroundColor3 = C.neonDim
-    SubmitBtn.Text = "🔓  AKTIVASI"
-    SubmitBtn.TextColor3 = C.neonGlow
-    SubmitBtn.TextSize = 14
-    SubmitBtn.Font = Enum.Font.GothamBold
-    SubmitBtn.BorderSizePixel = 0
-    SubmitBtn.ZIndex = 13
-    SubmitBtn.Parent = Card
-    local SBC = Instance.new("UICorner") SBC.CornerRadius = UDim.new(0,10) SBC.Parent = SubmitBtn
-    local SBS = Instance.new("UIStroke") SBS.Color = C.neon SBS.Thickness = 1 SBS.Parent = SubmitBtn
-
-    -- Info expire
-    local ExpireInfo = Instance.new("TextLabel")
-    ExpireInfo.Size = UDim2.new(0.88,0,0,40)
-    ExpireInfo.Position = UDim2.new(0.06,0,0,312)
-    ExpireInfo.BackgroundTransparency = 1
-    ExpireInfo.Text = "Key berlaku sesuai durasi yang ditetapkan.\nSetelah expire, masukkan key baru."
-    ExpireInfo.TextColor3 = C.textDim
-    ExpireInfo.TextSize = 10
-    ExpireInfo.Font = Enum.Font.Gotham
-    ExpireInfo.TextWrapped = true
-    ExpireInfo.ZIndex = 13
-    ExpireInfo.Parent = Card
-
-    -- Watermark bawah
-    local WaterLbl = Instance.new("TextLabel")
-    WaterLbl.Size = UDim2.new(1,0,0,20)
-    WaterLbl.Position = UDim2.new(0,0,0,385)
-    WaterLbl.BackgroundTransparency = 1
-    WaterLbl.Text = "Made by Veron  •  Unauthorized use is prohibited"
-    WaterLbl.TextColor3 = Color3.fromRGB(50,40,80)
-    WaterLbl.TextSize = 9
-    WaterLbl.Font = Enum.Font.Gotham
-    WaterLbl.ZIndex = 13
-    WaterLbl.Parent = Card
-
-    -- Animasi masuk Card (slide from below)
-    Card.Position = UDim2.new(0.5,-180,1.2,0)
-    TweenService:Create(Card, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0.5,-180,0.5,-210)
-    }):Play()
-
-    -- Logika submit key
-    local function tryKey()
-        local inputKey = KeyInput.Text:upper():gsub("%s","")
-        if inputKey == "" then
-            StatusLbl.Text = "⚠️ Key tidak boleh kosong!"
-            StatusLbl.TextColor3 = C.red
-            return
-        end
-        local hours = VALID_KEYS[inputKey]
-        if hours then
-            -- Key valid — simpan ke _G dengan waktu expire
-            _G.VeronKey = {
-                key = inputKey,
-                expireAt = tick() + hours * 3600,
-                hours = hours,
-            }
-            keyUnlocked = true
-            StatusLbl.Text = "✅ Key valid! Berlaku "..hours.." jam."
-            StatusLbl.TextColor3 = C.green
-
-            -- Animasi success
-            TweenService:Create(CardS, TweenInfo.new(0.3), {Color=C.green}):Play()
-            TweenService:Create(CardGlow, TweenInfo.new(0.3), {BackgroundColor3=C.green}):Play()
-            SubmitBtn.Text = "✅  BERHASIL!"
-
-            task.wait(1.2)
-            -- Slide out dan destroy key screen
-            TweenService:Create(Card, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                Position = UDim2.new(0.5,-180,-1.2,0)
-            }):Play()
-            TweenService:Create(Blur, TweenInfo.new(0.4), {BackgroundTransparency=1}):Play()
-            task.wait(0.5)
-            KeyGui:Destroy()
+    -- Logika — TANPA task.wait di main thread
+    local unlocked = false
+    btn.MouseButton1Click:Connect(function()
+        local k = inp.Text:upper():gsub("%s+","")
+        local h = VALID_KEYS[k]
+        if h then
+            _G.VeronKey = {key=k, expireAt=tick()+h*3600}
+            stat.Text = "✅ Key valid! Berlaku "..h.." jam."
+            stat.TextColor3 = C.green
+            btn.Text = "✅ BERHASIL!"
+            cdStroke.Color = C.green
+            unlocked = true
+            task.delay(1, function() KG:Destroy() end)
         else
-            -- Key salah
-            StatusLbl.Text = "❌ Key salah atau sudah expire!"
-            StatusLbl.TextColor3 = C.red
-            -- Shake animasi
-            for i=1,5 do
-                TweenService:Create(Card, TweenInfo.new(0.05), {
-                    Position = UDim2.new(0.5,-180+((i%2==0) and 8 or -8),0.5,-210)
-                }):Play()
-                task.wait(0.05)
-            end
-            TweenService:Create(Card, TweenInfo.new(0.1), {
-                Position = UDim2.new(0.5,-180,0.5,-210)
-            }):Play()
+            stat.Text = "❌ Key salah atau expired!"
+            stat.TextColor3 = C.red
         end
-    end
+    end)
+    inp.FocusLost:Connect(function(enter)
+        if enter then btn.MouseButton1Click:Fire() end
+    end)
 
-    SubmitBtn.MouseButton1Click:Connect(tryKey)
-    KeyInput.FocusLost:Connect(function(enter) if enter then tryKey() end end)
-
-    -- Tunggu sampai key unlock sebelum lanjut load hub
-    while not keyUnlocked do task.wait(0.1) end
+    -- Tunggu dengan loop ringan di coroutine terpisah
+    local done = false
+    task.spawn(function()
+        while not unlocked do task.wait(0.2) end
+        done = true
+    end)
+    -- Block main thread tanpa deadlock
+    while not done do task.wait(0.2) end
 end
 
 -- ================================================
 -- CLEANUP
 -- ================================================
-if game.CoreGui:FindFirstChild("Veron") then game.CoreGui.Veron:Destroy() end
+pcall(function()
+    local cg = game:GetService("CoreGui")
+    if cg:FindFirstChild("Veron") then cg.Veron:Destroy() end
+end)
+pcall(function()
+    local pg = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+    if pg and pg:FindFirstChild("Veron") then pg.Veron:Destroy() end
+end)
 
 -- ================================================
 -- SCREEN GUI
@@ -364,12 +233,18 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Veron"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-local guiParent = game.CoreGui
-pcall(function()
-    if typeof(gethui) == "function" then
-        guiParent = gethui()
-    end
-end)
+ScreenGui.DisplayOrder = 100
+
+local guiParent
+if typeof(gethui) == "function" then
+    pcall(function() guiParent = gethui() end)
+end
+if not guiParent then
+    pcall(function() guiParent = game:GetService("CoreGui") end)
+end
+if not guiParent then
+    guiParent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
 ScreenGui.Parent = guiParent
 
 -- Open Button
@@ -381,11 +256,11 @@ OpenBtn.Text = "⚡ VERON"
 OpenBtn.TextColor3 = C.neonGlow
 OpenBtn.TextSize = 13
 OpenBtn.Font = Enum.Font.GothamBold
-OpenBtn.Visible = false
+OpenBtn.Visible = false  -- muncul hanya saat hub ditutup
 OpenBtn.BorderSizePixel = 0
 OpenBtn.Parent = ScreenGui
 local OC=Instance.new("UICorner") OC.CornerRadius=UDim.new(0,8) OC.Parent=OpenBtn
-local OS=Instance.new("UIStroke") OS.Color=C.neon OS.Thickness=1 OS.Parent=OpenBtn
+local OS_=Instance.new("UIStroke") OS_.Color=C.neon OS_.Thickness=1 OS_.Parent=OpenBtn
 
 -- Main Frame
 local MainFrame = Instance.new("Frame")
@@ -396,6 +271,7 @@ MainFrame.BackgroundColor3 = C.bg
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = true  -- langsung muncul setelah key unlock
 MainFrame.Parent = ScreenGui
 local MFC=Instance.new("UICorner") MFC.CornerRadius=UDim.new(0,14) MFC.Parent=MainFrame
 local MFS=Instance.new("UIStroke") MFS.Color=C.neon MFS.Thickness=1.5 MFS.Parent=MainFrame
