@@ -1,5 +1,107 @@
 -- ================================================
---   VERON HUB v3.4 - Roblox Executor
+-- VERON EXPLOIT v3.4 - STATIC KEY SYSTEM
+-- Key: VERON-2026
+-- ================================================
+local VERON_KEY = "VERON-2026"
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
+local VERON_PARENT = (gethui and gethui()) or CoreGui
+
+local oldKeyGui = VERON_PARENT:FindFirstChild("VERON_KEY_SYSTEM")
+if oldKeyGui then oldKeyGui:Destroy() end
+
+local keyGui = Instance.new("ScreenGui")
+keyGui.Name = "VERON_KEY_SYSTEM"
+keyGui.ResetOnSpawn = false
+keyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+keyGui.Parent = VERON_PARENT
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 340, 0, 210)
+frame.Position = UDim2.new(0.5, -170, 0.5, -105)
+frame.BackgroundColor3 = Color3.fromRGB(20, 15, 30)
+frame.BorderSizePixel = 0
+frame.Parent = keyGui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(150, 70, 230)
+stroke.Thickness = 1.5
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 40)
+title.Position = UDim2.new(0, 10, 0, 12)
+title.BackgroundTransparency = 1
+title.Text = "VERON EXPLOIT • KEY SYSTEM"
+title.TextColor3 = Color3.fromRGB(200, 120, 255)
+title.TextSize = 19
+title.Font = Enum.Font.GothamBold
+title.Parent = frame
+
+local box = Instance.new("TextBox")
+box.Size = UDim2.new(1, -40, 0, 42)
+box.Position = UDim2.new(0, 20, 0, 62)
+box.BackgroundColor3 = Color3.fromRGB(35, 27, 45)
+box.PlaceholderText = "Enter key..."
+box.PlaceholderColor3 = Color3.fromRGB(135, 125, 145)
+box.Text = ""
+box.TextColor3 = Color3.fromRGB(255,255,255)
+box.TextSize = 14
+box.Font = Enum.Font.Gotham
+box.ClearTextOnFocus = false
+box.Parent = frame
+Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+
+local verify = Instance.new("TextButton")
+verify.Size = UDim2.new(1, -40, 0, 42)
+verify.Position = UDim2.new(0, 20, 0, 115)
+verify.BackgroundColor3 = Color3.fromRGB(130, 60, 190)
+verify.Text = "VERIFY KEY"
+verify.TextColor3 = Color3.fromRGB(255,255,255)
+verify.TextSize = 14
+verify.Font = Enum.Font.GothamBold
+verify.Parent = frame
+Instance.new("UICorner", verify).CornerRadius = UDim.new(0, 8)
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, -40, 0, 25)
+status.Position = UDim2.new(0, 20, 0, 164)
+status.BackgroundTransparency = 1
+status.Text = "Key required to continue"
+status.TextColor3 = Color3.fromRGB(170, 160, 180)
+status.TextSize = 12
+status.Font = Enum.Font.Gotham
+status.Parent = frame
+
+local verified = false
+local function checkKey()
+    if box.Text == VERON_KEY then
+        verified = true
+        status.Text = "✓ Key verified"
+        status.TextColor3 = Color3.fromRGB(90, 255, 140)
+        task.wait(0.35)
+        keyGui:Destroy()
+        return true
+    end
+    status.Text = "✕ Invalid key"
+    status.TextColor3 = Color3.fromRGB(255, 85, 85)
+    return false
+end
+
+verify.MouseButton1Click:Connect(checkKey)
+box.FocusLost:Connect(function(enterPressed)
+    if enterPressed then checkKey() end
+end)
+
+repeat task.wait() until verified
+
+-- ================================================
+-- ORIGINAL VERON EXPLOIT v3.4 STARTS BELOW
+-- ================================================
+
+-- ================================================
+--   VERON EXPLOIT v3.4 - Roblox Executor
 --   UI: Dark Purple Neon | Tab System
 --   Made by Veron
 --   v3.4: +SpeedAura +FakeLag/BlinkAttack
@@ -145,7 +247,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1,-50,1,0)
 TitleLabel.Position = UDim2.new(0,14,0,0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "⚡  VERON HUB  |  v3.4"
+TitleLabel.Text = "⚡  VERON EXPLOIT  |  v3.4"
 TitleLabel.TextColor3 = C.neonGlow
 TitleLabel.TextSize = 14
 TitleLabel.Font = Enum.Font.GothamBold
@@ -2222,9 +2324,9 @@ local function sendWebhook(content)
                 gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
             end)
             local body = HttpService:JSONEncode({
-                username = "Veron Hub",
+                username = "Veron Exploit",
                 embeds = {{
-                    title = "📡 Veron Hub Logger",
+                    title = "📡 Veron Exploit Logger",
                     color = 7077887,
                     fields = {
                         {name="Player", value=tostring(LocalPlayer.Name).." ("..tostring(LocalPlayer.UserId)..")", inline=true},
@@ -2232,7 +2334,7 @@ local function sendWebhook(content)
                         {name="Server", value=tostring(game.JobId), inline=false},
                         {name="Log",    value=tostring(content),   inline=false},
                     },
-                    footer = {text="Veron Hub v3.4"},
+                    footer = {text="Veron Exploit v3.4"},
                 }}
             })
             httpRequest({
@@ -2274,7 +2376,7 @@ testWH.TextSize=11 testWH.Font=Enum.Font.GothamBold testWH.BorderSizePixel=0
 testWH.Parent=TabPages["Extra"]
 local tWHC=Instance.new("UICorner") tWHC.CornerRadius=UDim.new(0,8) tWHC.Parent=testWH
 testWH.MouseButton1Click:Connect(function()
-    sendWebhook("✅ Test webhook dari Veron Hub v3.4 — server: "..game.JobId)
+    sendWebhook("✅ Test webhook dari Veron Exploit v3.4 — server: "..game.JobId)
     showToast("Webhook terkirim",true)
 end)
 
@@ -2282,7 +2384,7 @@ end)
 _G.VeronCombatTest = combatTestEnabled
 
 -- ================================================
-print("✅ Veron Hub v3.4 | Made by Veron")
+print("✅ Veron Exploit v3.4 | Made by Veron")
 print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
 print("   v3.3: +KillAura +AutoParry +AimbotLock +Blink +TPCursor +SpeedSlider")
 print("         +HealthESP +Crosshair +Radar +LoopTP +ChatSpam +ServerHop +Config +Webhook")
