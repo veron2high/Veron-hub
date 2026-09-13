@@ -3158,16 +3158,15 @@ local LBC2=Instance.new("UICorner") LBC2.CornerRadius=UDim.new(0,8) LBC2.Parent=
 SaveBtn.MouseButton1Click:Connect(saveConfig)
 LoadBtn.MouseButton1Click:Connect(loadConfig)
 
--- Discord webhook dihapus (berbahaya, kirim data ke pihak ketiga)
--- State global combat
-_G.VeronCombatTest = combatTestEnabled
-
--- ================================================
+-- Discord webhook dihapus
 print("✅ Veron Hub v3.4 | Made by Veron")
-print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
-print("   v3.3: +KillAura +AutoParry +AimbotLock +Blink +TPCursor +SpeedSlider")
-print("         +HealthESP +Crosshair +Radar +LoopTP +ChatSpam +ServerHop +Config +Webhook")
-print("   v3.4: +SpeedAura +FakeLag +ChatFlood +FakeDeath +RagdollSpam +SpinBot +ToolSpam")
-print("         +InvisBlink +GiantTiny +RandomTP +TPPlayerSpam +GravityTroll +LightTroll")
-print("         +CameraShake +Nametag +EmoteSpam")
--- ================================================
+end) -- tutup pcall
+
+if not _VERON_OK then
+    -- Kalau ada error, print ke console biar ketahuan penyebabnya
+    warn("[Veron] ERROR: " .. tostring(_VERON_ERR))
+    -- Tetap tampilkan GUI walau ada error
+    if MainFrame then MainFrame.Visible = true end
+else
+    print("[Veron] Load sukses! RightCtrl = hide/show")
+end
