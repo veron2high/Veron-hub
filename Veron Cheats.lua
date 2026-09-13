@@ -2282,9 +2282,355 @@ end)
 _G.VeronCombatTest = combatTestEnabled
 
 -- ================================================
-print("✅ Veron Hub v3.4 | Made by Veron")
-print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
-print("   v3.3: +KillAura +AutoParry +AimbotLock +Blink +TPCursor +SpeedSlider")
-print("         +HealthESP +Crosshair +Radar +LoopTP +ChatSpam +ServerHop +Config +Webhook")
-print("   v3.4: +SpeedAura (radius+force slider) +FakeLag/BlinkAttack (PC:E / Mobile:Btn)")
+-- TAB: RUSUH
 -- ================================================
+-- Semua fitur rusuh ada di tab Extra bawah sendiri
+createSection("Extra","🔥 RUSUH")
+
+-- ================================================
+-- 1. FLING PLAYER
+-- Lempar player lain dengan AssemblyLinearVelocity
+-- ================================================
+local flingOn = false
+local flingTargetName = ""
+
+local flingFrame = Instance.new("Frame")
+flingFrame.Size = UDim2.new(1,0,0,42)
+flingFrame.BackgroundColor3 = C.bg2
+flingFrame.BorderSizePixel = 0
+flingFrame.Parent = TabPages["Extra"]
+local fFC = Instance.new("UICorner") fFC.CornerRadius = UDim.new(0,10) fFC.Parent = flingFrame
+local fFS = Instance.new("UIStroke") fFS.Color = C.neonDim fFS.Thickness = 0.8 fFS.Parent = flingFrame
+
+local flingBox = Instance.new("TextBox")
+flingBox.Size = UDim2.new(0.58,-8,1,-12)
+flingBox.Position = UDim2.new(0,8,0,6)
+flingBox.BackgroundColor3 = C.bg
+flingBox.Text = "" flingBox.PlaceholderText = "Nama player..."
+flingBox.TextColor3 = C.text flingBox.PlaceholderColor3 = C.textDim
+flingBox.TextSize = 12 flingBox.Font = Enum.Font.Gotham
+flingBox.BorderSizePixel = 0 flingBox.ClearTextOnFocus = false
+flingBox.Parent = flingFrame
+local fBC = Instance.new("UICorner") fBC.CornerRadius = UDim.new(0,6) fBC.Parent = flingBox
+
+local flingBtn = Instance.new("TextButton")
+flingBtn.Size = UDim2.new(0.42,-8,1,-12)
+flingBtn.Position = UDim2.new(0.58,4,0,6)
+flingBtn.BackgroundColor3 = C.neonDim
+flingBtn.Text = "💥 Fling!"
+flingBtn.TextColor3 = C.neonGlow
+flingBtn.TextSize = 12 flingBtn.Font = Enum.Font.GothamBold
+flingBtn.BorderSizePixel = 0 flingBtn.Parent = flingFrame
+local fBtnC = Instance.new("UICorner") fBtnC.CornerRadius = UDim.new(0,6) fBtnC.Parent = flingBtn
+
+flingBtn.MouseButton1Click:Connect(function()
+    local name = flingBox.Text:lower()
+    if name == "" then return end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Name:lower():find(name) then
+            local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                -- Fling dengan velocity acak ke atas + arah random
+                local dir = Vector3.new(
+                    math.random(-1,1),
+                    3,
+                    math.random(-1,1)
+                ).Unit
+                hrp.AssemblyLinearVelocity = dir * math.random(300, 600)
+                showToast("Fling "..p.Name, true)
+            end
+            break
+        end
+    end
+end)
+
+-- ================================================
+-- 2. FLING SEMUA PLAYER (kecuali diri sendiri)
+-- ================================================
+createToggle("Extra","Fling All","Lempar semua player ke udara",function(s)
+    _G.FlingAll = s
+end)
+_G.FlingAll = false
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.FlingAll then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local dir = Vector3.new(math.random(-1,1), 2, math.random(-1,1)).Unit
+                        pcall(function()
+                            hrp.AssemblyLinearVelocity = dir * math.random(200,500)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ================================================
+-- 3. SPINBOT
+-- Putar karakter sendiri terus-menerus
+-- ================================================
+local spinOn = false
+local spinConn = nil
+createToggle("Extra","SpinBot","Putar karakter sendiri terus",function(s)
+    spinOn = s
+    if s then
+        spinConn = RunService.Heartbeat:Connect(function()
+            if not spinOn or not RootPart or not RootPart.Parent then return end
+            RootPart.CFrame = RootPart.CFrame * CFrame.Angles(0, math.rad(15), 0)
+        end)
+    else
+        if spinConn then spinConn:Disconnect() spinConn = nil end
+    end
+end)
+
+-- ================================================
+-- 4. FAKE DEATH LOOP
+-- Paksa animasi mati berulang
+-- ================================================
+local fakeDeathOn = false
+createToggle("Extra","Fake Death Loop","Animasi mati terus-terusan",function(s)
+    fakeDeathOn = s
+    task.spawn(function()
+        while fakeDeathOn do
+            local hum = Character and Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+            end
+            task.wait(1.5)
+        end
+    end)
+end)
+
+-- ================================================
+-- 5. GIANT & TINY
+-- Ubah ukuran karakter sendiri
+-- ================================================
+createSection("Extra","👾 UKURAN KARAKTER")
+
+local function setCharScale(scale)
+    if not Character then return end
+    local hum = Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    -- Cari/buat BodyDepthScale dll
+    local scaleNames = {"BodyDepthScale","BodyHeightScale","BodyWidthScale","HeadScale"}
+    for _, n in ipairs(scaleNames) do
+        local v = hum:FindFirstChild(n)
+        if v then v.Value = scale end
+    end
+end
+
+local giantFrame = Instance.new("Frame")
+giantFrame.Size = UDim2.new(1,0,0,36)
+giantFrame.BackgroundTransparency = 1
+giantFrame.Parent = TabPages["Extra"]
+local gFL = Instance.new("UIListLayout")
+gFL.FillDirection = Enum.FillDirection.Horizontal
+gFL.Padding = UDim.new(0,6)
+gFL.Parent = giantFrame
+
+local scaleButtons = {
+    {"🐜 Tiny", 0.3},
+    {"😐 Normal", 1},
+    {"👹 Giant", 4},
+}
+for _, data in ipairs(scaleButtons) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.33,-4,1,0)
+    btn.BackgroundColor3 = C.neonDim
+    btn.Text = data[1]
+    btn.TextColor3 = C.neonGlow
+    btn.TextSize = 11
+    btn.Font = Enum.Font.GothamBold
+    btn.BorderSizePixel = 0
+    btn.Parent = giantFrame
+    local bc = Instance.new("UICorner") bc.CornerRadius = UDim.new(0,8) bc.Parent = btn
+    local scale = data[2]
+    btn.MouseButton1Click:Connect(function()
+        setCharScale(scale)
+        showToast(data[1], true)
+    end)
+end
+
+-- ================================================
+-- 6. GRAVITY TROLL
+-- Ubah gravitasi workspace
+-- ================================================
+createSection("Extra","🌍 GRAVITY")
+
+local gravFrame = Instance.new("Frame")
+gravFrame.Size = UDim2.new(1,0,0,36)
+gravFrame.BackgroundTransparency = 1
+gravFrame.Parent = TabPages["Extra"]
+local gvFL = Instance.new("UIListLayout")
+gvFL.FillDirection = Enum.FillDirection.Horizontal
+gvFL.Padding = UDim.new(0,6)
+gvFL.Parent = gravFrame
+
+local gravButtons = {
+    {"🌙 Moon", 1.6},
+    {"🌍 Normal", 196.2},
+    {"🪐 Heavy", 600},
+    {"🚀 Zero-G", 0},
+}
+for _, data in ipairs(gravButtons) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.25,-5,1,0)
+    btn.BackgroundColor3 = C.bg3
+    btn.Text = data[1]
+    btn.TextColor3 = C.neonGlow
+    btn.TextSize = 10
+    btn.Font = Enum.Font.GothamBold
+    btn.BorderSizePixel = 0
+    btn.Parent = gravFrame
+    local bc = Instance.new("UICorner") bc.CornerRadius = UDim.new(0,8) bc.Parent = btn
+    local grav = data[2]
+    btn.MouseButton1Click:Connect(function()
+        workspace.Gravity = grav
+        showToast("Gravity: "..grav, true)
+    end)
+end
+
+-- ================================================
+-- 7. CAMERA SHAKE
+-- Goyang kamera terus-terusan
+-- ================================================
+local camShakeOn = false
+local camShakeConn = nil
+createToggle("Extra","Camera Shake","Layar goyang terus",function(s)
+    camShakeOn = s
+    if s then
+        camShakeConn = RunService.RenderStepped:Connect(function()
+            if not camShakeOn then return end
+            local intensity = 0.3
+            Camera.CFrame = Camera.CFrame * CFrame.Angles(
+                math.rad(math.random(-10,10) * intensity),
+                math.rad(math.random(-10,10) * intensity),
+                0
+            )
+        end)
+    else
+        if camShakeConn then camShakeConn:Disconnect() camShakeConn = nil end
+    end
+end)
+
+-- ================================================
+-- 8. NAMETAG KUSTOM
+-- Ganti nama yang muncul di atas kepala sendiri
+-- ================================================
+createSection("Extra","🏷️ NAMETAG")
+
+local nametagFrame = Instance.new("Frame")
+nametagFrame.Size = UDim2.new(1,0,0,42)
+nametagFrame.BackgroundColor3 = C.bg2
+nametagFrame.BorderSizePixel = 0
+nametagFrame.Parent = TabPages["Extra"]
+local ntFC = Instance.new("UICorner") ntFC.CornerRadius = UDim.new(0,10) ntFC.Parent = nametagFrame
+local ntFS = Instance.new("UIStroke") ntFS.Color = C.neonDim ntFS.Thickness = 0.8 ntFS.Parent = nametagFrame
+
+local nametagBox = Instance.new("TextBox")
+nametagBox.Size = UDim2.new(0.65,-8,1,-12)
+nametagBox.Position = UDim2.new(0,8,0,6)
+nametagBox.BackgroundColor3 = C.bg
+nametagBox.Text = "" nametagBox.PlaceholderText = "Nama baru..."
+nametagBox.TextColor3 = C.text nametagBox.PlaceholderColor3 = C.textDim
+nametagBox.TextSize = 12 nametagBox.Font = Enum.Font.Gotham
+nametagBox.BorderSizePixel = 0 nametagBox.ClearTextOnFocus = false
+nametagBox.Parent = nametagFrame
+local ntBC = Instance.new("UICorner") ntBC.CornerRadius = UDim.new(0,6) ntBC.Parent = nametagBox
+
+local nametagBtn = Instance.new("TextButton")
+nametagBtn.Size = UDim2.new(0.35,-8,1,-12)
+nametagBtn.Position = UDim2.new(0.65,4,0,6)
+nametagBtn.BackgroundColor3 = C.neonDim
+nametagBtn.Text = "✏️ Set"
+nametagBtn.TextColor3 = C.neonGlow
+nametagBtn.TextSize = 12 nametagBtn.Font = Enum.Font.GothamBold
+nametagBtn.BorderSizePixel = 0 nametagBtn.Parent = nametagFrame
+local ntBtnC = Instance.new("UICorner") ntBtnC.CornerRadius = UDim.new(0,6) ntBtnC.Parent = nametagBtn
+
+nametagBtn.MouseButton1Click:Connect(function()
+    local newName = nametagBox.Text
+    if newName == "" then return end
+    local char = Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+
+    -- Hapus nametag lama kalau ada
+    local old = head:FindFirstChild("VeronNametag")
+    if old then old:Destroy() end
+
+    -- Buat BillboardGui nametag baru
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "VeronNametag"
+    bb.Size = UDim2.new(0,200,0,30)
+    bb.StudsOffset = Vector3.new(0,2,0)
+    bb.AlwaysOnTop = false
+    bb.Parent = head
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,0,1,0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = newName
+    lbl.TextColor3 = C.neonGlow
+    lbl.TextStrokeTransparency = 0
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 14
+    lbl.Parent = bb
+
+    showToast("Nametag: "..newName, true)
+end)
+
+-- Reset nametag
+local nametagResetBtn = Instance.new("TextButton")
+nametagResetBtn.Size = UDim2.new(1,0,0,28)
+nametagResetBtn.BackgroundColor3 = C.bg3
+nametagResetBtn.Text = "🗑️ Reset Nametag"
+nametagResetBtn.TextColor3 = C.textDim
+nametagResetBtn.TextSize = 11
+nametagResetBtn.Font = Enum.Font.GothamBold
+nametagResetBtn.BorderSizePixel = 0
+nametagResetBtn.Parent = TabPages["Extra"]
+local ntRC = Instance.new("UICorner") ntRC.CornerRadius = UDim.new(0,8) ntRC.Parent = nametagResetBtn
+nametagResetBtn.MouseButton1Click:Connect(function()
+    local head = Character and Character:FindFirstChild("Head")
+    if head then
+        local tag = head:FindFirstChild("VeronNametag")
+        if tag then tag:Destroy() end
+    end
+    showToast("Nametag direset", false)
+end)
+
+-- ================================================
+-- 9. RAGDOLL SENDIRI
+-- Bikin karakter sendiri ragdoll / jatuh lemas
+-- ================================================
+createSection("Extra","🪆 RAGDOLL")
+
+local ragdollOn = false
+createToggle("Extra","Ragdoll Sendiri","Karakter jadi lemas/ragdoll",function(s)
+    ragdollOn = s
+    local hum = Character and Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        pcall(function()
+            hum:ChangeState(s
+                and Enum.HumanoidStateType.Ragdoll
+                or  Enum.HumanoidStateType.GettingUp)
+        end)
+        if s then
+            hum.PlatformStand = true
+        else
+            hum.PlatformStand = false
+        end
+    end
+end)
+
+-- ================================================
+-- print update
+print("✅ Veron Hub v4.0 | Made by Veron")
+print("   +Rusuh: Fling, FlingAll, SpinBot, FakeDeath, Giant/Tiny, Gravity, CameraShake, Nametag, Ragdoll")
