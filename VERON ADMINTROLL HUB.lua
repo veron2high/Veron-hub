@@ -17,7 +17,18 @@ local Camera = workspace.CurrentCamera
 -- PARENT SETUP
 -- ================================================
 local CoreGui = game:GetService("CoreGui")
-local VERON_PARENT = (gethui and gethui()) or CoreGui
+local VERON_PARENT
+pcall(function()
+    if typeof(gethui) == "function" then
+        VERON_PARENT = gethui()
+    end
+end)
+if not VERON_PARENT then
+    pcall(function() VERON_PARENT = CoreGui end)
+end
+if not VERON_PARENT then
+    VERON_PARENT = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 -- ================================================
 -- KEY SYSTEM UI
@@ -470,7 +481,6 @@ targetLabel.TextColor3 = C.neonGlow
 targetLabel.TextSize = 11
 targetLabel.Font = Enum.Font.GothamBold
 targetLabel.BorderSizePixel = 0
-targetLabel.Parent = TabPages["Players"]
 Instance.new("UICorner", targetLabel).CornerRadius = UDim.new(0, 8)
 
 local function getTarget(name)
@@ -488,6 +498,7 @@ end
 -- TAB: PLAYERS (Player List)
 -- ================================================
 makeSection("Players", "PLAYER LIST — Klik untuk pilih target")
+targetLabel.Parent = TabPages["Players"]
 
 local playerListFrame = Instance.new("Frame")
 playerListFrame.Size = UDim2.new(1, 0, 0, 0)
