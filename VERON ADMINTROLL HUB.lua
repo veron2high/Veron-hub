@@ -268,7 +268,7 @@ for i, name in ipairs(TabNames) do
     TabBtns[name] = btn
 
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -16, 0, 400)
+    page.Size = UDim2.new(1, -16, 1, -90)
     page.Position = UDim2.new(0, 8, 0, 86)
     page.BackgroundTransparency = 1
     page.BorderSizePixel = 0
@@ -277,7 +277,7 @@ for i, name in ipairs(TabNames) do
     page.CanvasSize = UDim2.new(0, 0, 0, 0)
     page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     page.Visible = i == 1
-    page.ClipsDescendants = false
+    page.ClipsDescendants = true
     page.Parent = MainFrame
     local layout = Instance.new("UIListLayout")
     layout.Padding = UDim.new(0, 6)
