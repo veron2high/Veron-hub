@@ -2,9 +2,8 @@
 --   VERON HUB v3.4 - Roblox Executor
 --   UI: Dark Purple Neon | Tab System
 --   Made by Veron
+--   v3.4: +SpeedAura +FakeLag/BlinkAttack
 -- ================================================
-print("[Veron] Script mulai load...")
-local _VERON_OK, _VERON_ERR = pcall(function()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -107,17 +106,17 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 100
 
--- Fix: coba semua cara parent GUI
-local function setGuiParent(gui)
-    if typeof(gethui) == "function" then
-        local ok, h = pcall(gethui)
-        if ok and h then gui.Parent = h return end
-    end
-    local ok2 = pcall(function() gui.Parent = game:GetService("CoreGui") end)
-    if ok2 and gui.Parent then return end
-    gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+local guiParent
+if typeof(gethui) == "function" then
+    pcall(function() guiParent = gethui() end)
 end
-setGuiParent(ScreenGui)
+if not guiParent then
+    pcall(function() guiParent = game:GetService("CoreGui") end)
+end
+if not guiParent then
+    guiParent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+ScreenGui.Parent = guiParent
 
 -- Open Button
 local OpenBtn = Instance.new("TextButton")
@@ -2939,7 +2938,43 @@ createToggle("Extra","Infinite Fling","Fling terus makin kencang sampai OFF",fun
     end)
 end)
 
--- Key system dihapus, tidak diperlukan
+createSection("Extra","KEY STATUS")
+
+local keyStatusLbl = Instance.new("TextLabel")
+keyStatusLbl.Size = UDim2.new(1,0,0,18)
+keyStatusLbl.BackgroundTransparency = 1
+keyStatusLbl.TextSize = 11
+keyStatusLbl.Font = Enum.Font.GothamBold
+keyStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
+keyStatusLbl.Parent = TabPages["Extra"]
+
+local function updateKeyStatus()
+    local stored = _G.VeronKey
+    if type(stored)~="table" or not stored.expireAt then
+        keyStatusLbl.Text = "  🔑 Key: tidak diketahui"
+        keyStatusLbl.TextColor3 = C.textDim
+        return
+    end
+    local remaining = stored.expireAt - tick()
+    if remaining <= 0 then
+        keyStatusLbl.Text = "  ❌ Key EXPIRED — restart & masukkan key baru"
+        keyStatusLbl.TextColor3 = C.red
+    else
+        local h = math.floor(remaining/3600)
+        local m = math.floor((remaining%3600)/60)
+        keyStatusLbl.Text = string.format("  ✅ Key aktif  •  Sisa: %dj %dm", h, m)
+        keyStatusLbl.TextColor3 = remaining < 3600 and C.red or C.green
+    end
+end
+
+-- Update setiap 10 detik
+task.spawn(function()
+    while true do
+        updateKeyStatus()
+        task.wait(10)
+    end
+end)
+updateKeyStatus()
 
 createSection("Extra","THEME")
 local themeColors={
@@ -3158,15 +3193,108 @@ local LBC2=Instance.new("UICorner") LBC2.CornerRadius=UDim.new(0,8) LBC2.Parent=
 SaveBtn.MouseButton1Click:Connect(saveConfig)
 LoadBtn.MouseButton1Click:Connect(loadConfig)
 
--- Discord webhook dihapus
-print("✅ Veron Hub v3.4 | Made by Veron")
-end) -- tutup pcall
+-- ================================================
+-- DISCORD WEBHOOK LOGGER
+-- ================================================
+createSection("Extra","DISCORD WEBHOOK")
 
-if not _VERON_OK then
-    -- Kalau ada error, print ke console biar ketahuan penyebabnya
-    warn("[Veron] ERROR: " .. tostring(_VERON_ERR))
-    -- Tetap tampilkan GUI walau ada error
-    if MainFrame then MainFrame.Visible = true end
-else
-    print("[Veron] Load sukses! RightCtrl = hide/show")
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1548440747714289826/x1ukko9NJb9MJle61z51ive78eg5ZtsaYNjmdPJLWLFm4yU2wGxgcsnTxMfP5w3qMCMb"
+
+-- Cari fungsi http yang tersedia di executor (pakai pcall agar tidak error)
+local httpRequest = nil
+local function tryHTTP()
+    local fns = {
+        function() if syn and syn.request then return syn.request end end,
+        function() if http and http.request then return http.request end end,
+        function() if typeof(request)=="function" then return request end end,
+        function() if typeof(HttpRequest)=="function" then return HttpRequest end end,
+        function() if typeof(http_request)=="function" then return http_request end end,
+    }
+    for _,fn in ipairs(fns) do
+        local ok,res = pcall(fn)
+        if ok and res then return res end
+    end
+    return nil
 end
+httpRequest = tryHTTP()
+
+local function sendWebhook(content)
+    -- Re-detect tiap call biar jaga-jaga executor lambat load
+    if not httpRequest then httpRequest = tryHTTP() end
+    if not httpRequest then return end
+    task.spawn(function() -- jalankan di thread terpisah agar tidak block UI
+        pcall(function()
+            local HttpService = game:GetService("HttpService")
+            local gameName = "Unknown"
+            pcall(function()
+                gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+            end)
+            local body = HttpService:JSONEncode({
+                username = "Veron Hub",
+                embeds = {{
+                    title = "📡 Veron Hub Logger",
+                    color = 7077887,
+                    fields = {
+                        {name="Player", value=tostring(LocalPlayer.Name).." ("..tostring(LocalPlayer.UserId)..")", inline=true},
+                        {name="Game",   value=tostring(gameName), inline=true},
+                        {name="Server", value=tostring(game.JobId), inline=false},
+                        {name="Log",    value=tostring(content),   inline=false},
+                    },
+                    footer = {text="Veron Hub v3.4"},
+                }}
+            })
+            httpRequest({
+                Url = WEBHOOK_URL,
+                Method = "POST",
+                Headers = {["Content-Type"]="application/json"},
+                Body = body,
+            })
+        end)
+    end)
+end
+
+-- Auto send saat script dijalankan
+task.spawn(function()
+    task.wait(2) -- tunggu game fully loaded
+    sendWebhook("🚀 Script dieksekusi")
+end)
+
+-- Toggle log chat ke webhook
+createToggle("Extra","Log Chat → Webhook","Kirim chat ke Discord webhook",function(s) _G.WebhookChat=s end)
+_G.WebhookChat=false
+
+-- Intercept logChat jika ada, kirim ke webhook
+pcall(function()
+    local origLogChat = logChat
+    if type(origLogChat) ~= "function" then return end
+    logChat = function(player, msg)
+        pcall(origLogChat, player, msg)
+        if _G.WebhookChat then
+            sendWebhook(tostring(player.Name)..": "..tostring(msg))
+        end
+    end
+end)
+
+local testWH=Instance.new("TextButton")
+testWH.Size=UDim2.new(1,0,0,28) testWH.BackgroundColor3=C.bg3
+testWH.Text="📤 Test Webhook" testWH.TextColor3=C.neonGlow
+testWH.TextSize=11 testWH.Font=Enum.Font.GothamBold testWH.BorderSizePixel=0
+testWH.Parent=TabPages["Extra"]
+local tWHC=Instance.new("UICorner") tWHC.CornerRadius=UDim.new(0,8) tWHC.Parent=testWH
+testWH.MouseButton1Click:Connect(function()
+    sendWebhook("✅ Test webhook dari Veron Hub v3.4 — server: "..game.JobId)
+    showToast("Webhook terkirim",true)
+end)
+
+-- State global combat (mirror toggle utama)
+_G.VeronCombatTest = combatTestEnabled
+
+-- ================================================
+print("✅ Veron Hub v3.4 | Made by Veron")
+print("   RightCtrl = hide/show (bisa diubah di tab Extra)")
+print("   v3.3: +KillAura +AutoParry +AimbotLock +Blink +TPCursor +SpeedSlider")
+print("         +HealthESP +Crosshair +Radar +LoopTP +ChatSpam +ServerHop +Config +Webhook")
+print("   v3.4: +SpeedAura +FakeLag +ChatFlood +FakeDeath +RagdollSpam +SpinBot +ToolSpam")
+print("         +InvisBlink +GiantTiny +RandomTP +TPPlayerSpam +GravityTroll +LightTroll")
+print("         +CameraShake +Nametag +EmoteSpam")
+-- ================================================
