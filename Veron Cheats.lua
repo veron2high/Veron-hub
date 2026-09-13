@@ -39,10 +39,10 @@ overlay.BorderSizePixel = 0
 overlay.ZIndex = 1
 overlay.Parent = keyGui
 
--- Main frame (starts offscreen, slides in)
+-- Main frame
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 380, 0, 310)
-frame.Position = UDim2.new(0.5, -190, 1.5, 0) -- starts below screen
+frame.Position = UDim2.new(0.5, -190, 0.5, -155)
 frame.BackgroundColor3 = Color3.fromRGB(5, 12, 20)
 frame.BorderSizePixel = 0
 frame.ZIndex = 2
@@ -189,9 +189,10 @@ end)
 -- ANIMATIONS
 -- =====================
 
--- 1) Slide-in frame from bottom
-TweenService_KS:Create(frame, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Position = UDim2.new(0.5, -190, 0.5, -155)
+-- 1) Fade-in frame
+frame.BackgroundTransparency = 1
+TweenService_KS:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    BackgroundTransparency = 0
 }):Play()
 
 -- 2) Glow pulse on stroke (cyan blink loop)
