@@ -18,8 +18,8 @@ keyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 keyGui.Parent = VERON_PARENT
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 340, 0, 210)
-frame.Position = UDim2.new(0.5, -170, 0.5, -105)
+frame.Size = UDim2.new(0, 340, 0, 280)
+frame.Position = UDim2.new(0.5, -170, 0.5, -140)
 frame.BackgroundColor3 = Color3.fromRGB(20, 15, 30)
 frame.BorderSizePixel = 0
 frame.Parent = keyGui
@@ -73,6 +73,35 @@ status.TextColor3 = Color3.fromRGB(170, 160, 180)
 status.TextSize = 12
 status.Font = Enum.Font.Gotham
 status.Parent = frame
+
+local credit = Instance.new("TextLabel")
+credit.Size = UDim2.new(1, -20, 0, 18)
+credit.Position = UDim2.new(0, 10, 0, 196)
+credit.BackgroundTransparency = 1
+credit.Text = "👑 Developer : veron2high"
+credit.TextColor3 = Color3.fromRGB(200, 120, 255)
+credit.TextSize = 12
+credit.Font = Enum.Font.GothamBold
+credit.TextXAlignment = Enum.TextXAlignment.Center
+credit.Parent = frame
+
+local dcBtn = Instance.new("TextButton")
+dcBtn.Size = UDim2.new(1, -40, 0, 30)
+dcBtn.Position = UDim2.new(0, 20, 0, 220)
+dcBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+dcBtn.Text = "💬 Join Discord — discord.gg/bMPUb9npG"
+dcBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+dcBtn.TextSize = 12
+dcBtn.Font = Enum.Font.GothamBold
+dcBtn.Parent = frame
+Instance.new("UICorner", dcBtn).CornerRadius = UDim.new(0, 8)
+dcBtn.MouseButton1Click:Connect(function()
+    setclipboard("https://discord.gg/bMPUb9npG")
+    dcBtn.Text = "✅ Link copied!"
+    task.delay(2, function()
+        dcBtn.Text = "💬 Join Discord — discord.gg/bMPUb9npG"
+    end)
+end)
 
 local verified = false
 local function checkKey()
@@ -199,13 +228,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Veron"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-local guiParent = game.CoreGui
-pcall(function()
-    if typeof(gethui) == "function" then
-        guiParent = gethui()
-    end
-end)
-ScreenGui.Parent = guiParent
+ScreenGui.Parent = VERON_PARENT
 
 -- Open Button
 local OpenBtn = Instance.new("TextButton")
