@@ -186,8 +186,8 @@ OS2.Thickness = 1
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 500, 0, 540)
-MainFrame.Position = UDim2.new(0.5, -250, 0.5, -270)
+MainFrame.Size = UDim2.new(0, 500, 0, 560)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -280)
 MainFrame.BackgroundColor3 = C.bg
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -268,21 +268,26 @@ for i, name in ipairs(TabNames) do
     TabBtns[name] = btn
 
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -16, 1, -92)
-    page.Position = UDim2.new(0, 8, 0, 84)
+    page.Size = UDim2.new(1, -16, 0, 400)
+    page.Position = UDim2.new(0, 8, 0, 86)
     page.BackgroundTransparency = 1
     page.BorderSizePixel = 0
-    page.ScrollBarThickness = 3
+    page.ScrollBarThickness = 4
     page.ScrollBarImageColor3 = C.neon
     page.CanvasSize = UDim2.new(0, 0, 0, 0)
     page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     page.Visible = i == 1
+    page.ClipsDescendants = false
     page.Parent = MainFrame
     local layout = Instance.new("UIListLayout")
     layout.Padding = UDim.new(0, 6)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = page
     local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, 4)
+    pad.PaddingTop = UDim.new(0, 6)
+    pad.PaddingBottom = UDim.new(0, 6)
+    pad.PaddingLeft = UDim.new(0, 2)
+    pad.PaddingRight = UDim.new(0, 2)
     pad.Parent = page
     TabPages[name] = page
 end
