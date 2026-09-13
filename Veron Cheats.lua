@@ -6,7 +6,14 @@ local VERON_KEY = "VERON-2026"
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
-local VERON_PARENT = (gethui and gethui()) or CoreGui
+local VERON_PARENT
+if typeof(gethui) == "function" then
+    VERON_PARENT = gethui()
+elseif CoreGui then
+    VERON_PARENT = CoreGui
+else
+    VERON_PARENT = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 local oldKeyGui = VERON_PARENT:FindFirstChild("VERON_KEY_SYSTEM")
 if oldKeyGui then oldKeyGui:Destroy() end
@@ -382,13 +389,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Veron"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-local guiParent = game.CoreGui
-pcall(function()
-    if typeof(gethui) == "function" then
-        guiParent = gethui()
-    end
-end)
-ScreenGui.Parent = guiParent
+ScreenGui.Parent = VERON_PARENT
 
 -- Open Button
 local OpenBtn = Instance.new("TextButton")
