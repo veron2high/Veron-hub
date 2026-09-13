@@ -106,14 +106,10 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 100
 
+-- Fix: langsung pakai CoreGui, fallback ke PlayerGui
 local guiParent
-if typeof(gethui) == "function" then
-    pcall(function() guiParent = gethui() end)
-end
-if not guiParent then
-    pcall(function() guiParent = game:GetService("CoreGui") end)
-end
-if not guiParent then
+local okCore = pcall(function() guiParent = game:GetService("CoreGui") end)
+if not okCore or not guiParent then
     guiParent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 end
 ScreenGui.Parent = guiParent
@@ -2938,43 +2934,7 @@ createToggle("Extra","Infinite Fling","Fling terus makin kencang sampai OFF",fun
     end)
 end)
 
-createSection("Extra","KEY STATUS")
-
-local keyStatusLbl = Instance.new("TextLabel")
-keyStatusLbl.Size = UDim2.new(1,0,0,18)
-keyStatusLbl.BackgroundTransparency = 1
-keyStatusLbl.TextSize = 11
-keyStatusLbl.Font = Enum.Font.GothamBold
-keyStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
-keyStatusLbl.Parent = TabPages["Extra"]
-
-local function updateKeyStatus()
-    local stored = _G.VeronKey
-    if type(stored)~="table" or not stored.expireAt then
-        keyStatusLbl.Text = "  🔑 Key: tidak diketahui"
-        keyStatusLbl.TextColor3 = C.textDim
-        return
-    end
-    local remaining = stored.expireAt - tick()
-    if remaining <= 0 then
-        keyStatusLbl.Text = "  ❌ Key EXPIRED — restart & masukkan key baru"
-        keyStatusLbl.TextColor3 = C.red
-    else
-        local h = math.floor(remaining/3600)
-        local m = math.floor((remaining%3600)/60)
-        keyStatusLbl.Text = string.format("  ✅ Key aktif  •  Sisa: %dj %dm", h, m)
-        keyStatusLbl.TextColor3 = remaining < 3600 and C.red or C.green
-    end
-end
-
--- Update setiap 10 detik
-task.spawn(function()
-    while true do
-        updateKeyStatus()
-        task.wait(10)
-    end
-end)
-updateKeyStatus()
+-- Key system dihapus, tidak diperlukan
 
 createSection("Extra","THEME")
 local themeColors={
