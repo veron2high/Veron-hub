@@ -11,81 +11,264 @@ local VERON_PARENT = (gethui and gethui()) or CoreGui
 local oldKeyGui = VERON_PARENT:FindFirstChild("VERON_KEY_SYSTEM")
 if oldKeyGui then oldKeyGui:Destroy() end
 
+-- ================================================
+-- VERON EXPLOIT — NEON CYAN KEY SYSTEM UI
+-- Full Animation | Animated Logo | Dev Credit
+-- ================================================
+local TweenService_KS = game:GetService("TweenService")
+
 local keyGui = Instance.new("ScreenGui")
 keyGui.Name = "VERON_KEY_SYSTEM"
 keyGui.ResetOnSpawn = false
 keyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 keyGui.Parent = VERON_PARENT
 
+-- Background blur overlay
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+overlay.BackgroundTransparency = 0.45
+overlay.BorderSizePixel = 0
+overlay.ZIndex = 1
+overlay.Parent = keyGui
+
+-- Main frame (starts offscreen, slides in)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 340, 0, 210)
-frame.Position = UDim2.new(0.5, -170, 0.5, -105)
-frame.BackgroundColor3 = Color3.fromRGB(20, 15, 30)
+frame.Size = UDim2.new(0, 380, 0, 310)
+frame.Position = UDim2.new(0.5, -190, 1.5, 0) -- starts below screen
+frame.BackgroundColor3 = Color3.fromRGB(5, 12, 20)
 frame.BorderSizePixel = 0
+frame.ZIndex = 2
 frame.Parent = keyGui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
 
+-- Outer glow stroke (animated)
 local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(150, 70, 230)
-stroke.Thickness = 1.5
+stroke.Color = Color3.fromRGB(0, 220, 255)
+stroke.Thickness = 2
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -20, 0, 40)
-title.Position = UDim2.new(0, 10, 0, 12)
-title.BackgroundTransparency = 1
-title.Text = "VERON EXPLOIT • KEY SYSTEM"
-title.TextColor3 = Color3.fromRGB(200, 120, 255)
-title.TextSize = 19
-title.Font = Enum.Font.GothamBold
-title.Parent = frame
+-- Top accent bar (cyan gradient strip)
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 4)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundColor3 = Color3.fromRGB(0, 220, 255)
+topBar.BorderSizePixel = 0
+topBar.ZIndex = 3
+topBar.Parent = frame
+local topBarCorner = Instance.new("UICorner", topBar)
+topBarCorner.CornerRadius = UDim.new(0, 16)
 
+-- ⚡ Animated logo label
+local logo = Instance.new("TextLabel")
+logo.Size = UDim2.new(1, 0, 0, 50)
+logo.Position = UDim2.new(0, 0, 0, 12)
+logo.BackgroundTransparency = 1
+logo.Text = "⚡ VERON EXPLOIT"
+logo.TextColor3 = Color3.fromRGB(0, 220, 255)
+logo.TextSize = 24
+logo.Font = Enum.Font.GothamBold
+logo.TextXAlignment = Enum.TextXAlignment.Center
+logo.ZIndex = 3
+logo.Parent = frame
+
+-- Subtitle
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, 0, 0, 20)
+subtitle.Position = UDim2.new(0, 0, 0, 58)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "KEY AUTHENTICATION"
+subtitle.TextColor3 = Color3.fromRGB(0, 160, 200)
+subtitle.TextSize = 11
+subtitle.Font = Enum.Font.GothamBold
+subtitle.TextXAlignment = Enum.TextXAlignment.Center
+subtitle.ZIndex = 3
+subtitle.Parent = frame
+
+-- Divider line
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0, 300, 0, 1)
+divider.Position = UDim2.new(0.5, -150, 0, 86)
+divider.BackgroundColor3 = Color3.fromRGB(0, 220, 255)
+divider.BackgroundTransparency = 0.6
+divider.BorderSizePixel = 0
+divider.ZIndex = 3
+divider.Parent = frame
+
+-- Key input box
 local box = Instance.new("TextBox")
-box.Size = UDim2.new(1, -40, 0, 42)
-box.Position = UDim2.new(0, 20, 0, 62)
-box.BackgroundColor3 = Color3.fromRGB(35, 27, 45)
-box.PlaceholderText = "Enter key..."
-box.PlaceholderColor3 = Color3.fromRGB(135, 125, 145)
+box.Size = UDim2.new(1, -40, 0, 44)
+box.Position = UDim2.new(0, 20, 0, 100)
+box.BackgroundColor3 = Color3.fromRGB(10, 25, 38)
+box.PlaceholderText = "🔑  Enter your key here..."
+box.PlaceholderColor3 = Color3.fromRGB(60, 120, 145)
 box.Text = ""
-box.TextColor3 = Color3.fromRGB(255,255,255)
-box.TextSize = 14
+box.TextColor3 = Color3.fromRGB(0, 230, 255)
+box.TextSize = 13
 box.Font = Enum.Font.Gotham
 box.ClearTextOnFocus = false
+box.ZIndex = 3
 box.Parent = frame
-Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", box).CornerRadius = UDim.new(0, 10)
+local boxStroke = Instance.new("UIStroke", box)
+boxStroke.Color = Color3.fromRGB(0, 180, 220)
+boxStroke.Thickness = 1.2
 
+-- Verify button
 local verify = Instance.new("TextButton")
-verify.Size = UDim2.new(1, -40, 0, 42)
-verify.Position = UDim2.new(0, 20, 0, 115)
-verify.BackgroundColor3 = Color3.fromRGB(130, 60, 190)
-verify.Text = "VERIFY KEY"
-verify.TextColor3 = Color3.fromRGB(255,255,255)
+verify.Size = UDim2.new(1, -40, 0, 44)
+verify.Position = UDim2.new(0, 20, 0, 156)
+verify.BackgroundColor3 = Color3.fromRGB(0, 180, 220)
+verify.Text = "▶  VERIFY KEY"
+verify.TextColor3 = Color3.fromRGB(255, 255, 255)
 verify.TextSize = 14
 verify.Font = Enum.Font.GothamBold
+verify.ZIndex = 3
 verify.Parent = frame
-Instance.new("UICorner", verify).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", verify).CornerRadius = UDim.new(0, 10)
 
+-- Status label
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -40, 0, 25)
-status.Position = UDim2.new(0, 20, 0, 164)
+status.Size = UDim2.new(1, -40, 0, 22)
+status.Position = UDim2.new(0, 20, 0, 208)
 status.BackgroundTransparency = 1
-status.Text = "Key required to continue"
-status.TextColor3 = Color3.fromRGB(170, 160, 180)
+status.Text = "Masukkan key untuk melanjutkan"
+status.TextColor3 = Color3.fromRGB(80, 160, 190)
 status.TextSize = 12
 status.Font = Enum.Font.Gotham
+status.TextXAlignment = Enum.TextXAlignment.Center
+status.ZIndex = 3
 status.Parent = frame
 
+-- Developer credit
+local credit = Instance.new("TextLabel")
+credit.Size = UDim2.new(1, 0, 0, 18)
+credit.Position = UDim2.new(0, 0, 0, 238)
+credit.BackgroundTransparency = 1
+credit.Text = "👑 Developer : veron2high"
+credit.TextColor3 = Color3.fromRGB(0, 200, 240)
+credit.TextSize = 12
+credit.Font = Enum.Font.GothamBold
+credit.TextXAlignment = Enum.TextXAlignment.Center
+credit.ZIndex = 3
+credit.Parent = frame
+
+-- Discord button
+local dcBtn = Instance.new("TextButton")
+dcBtn.Size = UDim2.new(1, -40, 0, 32)
+dcBtn.Position = UDim2.new(0, 20, 0, 264)
+dcBtn.BackgroundColor3 = Color3.fromRGB(10, 40, 60)
+dcBtn.Text = "💬  discord.gg/bMPUb9npG  —  Tap to copy"
+dcBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+dcBtn.TextSize = 11
+dcBtn.Font = Enum.Font.GothamBold
+dcBtn.ZIndex = 3
+dcBtn.Parent = frame
+Instance.new("UICorner", dcBtn).CornerRadius = UDim.new(0, 8)
+local dcStroke = Instance.new("UIStroke", dcBtn)
+dcStroke.Color = Color3.fromRGB(0, 150, 200)
+dcStroke.Thickness = 1
+
+dcBtn.MouseButton1Click:Connect(function()
+    setclipboard("https://discord.gg/bMPUb9npG")
+    dcBtn.Text = "✅  Link copied!"
+    dcBtn.TextColor3 = Color3.fromRGB(60, 255, 180)
+    task.delay(2, function()
+        dcBtn.Text = "💬  discord.gg/bMPUb9npG  —  Tap to copy"
+        dcBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+    end)
+end)
+
+-- =====================
+-- ANIMATIONS
+-- =====================
+
+-- 1) Slide-in frame from bottom
+TweenService_KS:Create(frame, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Position = UDim2.new(0.5, -190, 0.5, -155)
+}):Play()
+
+-- 2) Glow pulse on stroke (cyan blink loop)
+task.spawn(function()
+    while keyGui.Parent ~= nil do
+        TweenService_KS:Create(stroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Thickness = 3.5,
+        }):Play()
+        task.wait(1)
+        TweenService_KS:Create(stroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Thickness = 1.5,
+        }):Play()
+        task.wait(1)
+    end
+end)
+
+-- 3) Animated logo color cycle (cyan ↔ white shimmer)
+task.spawn(function()
+    local colors = {
+        Color3.fromRGB(0, 220, 255),
+        Color3.fromRGB(150, 240, 255),
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(150, 240, 255),
+    }
+    local i = 1
+    while keyGui.Parent ~= nil do
+        TweenService_KS:Create(logo, TweenInfo.new(0.7, Enum.EasingStyle.Sine), {
+            TextColor3 = colors[i]
+        }):Play()
+        i = (i % #colors) + 1
+        task.wait(0.7)
+    end
+end)
+
+-- 4) Verify button hover effect
+verify.MouseEnter:Connect(function()
+    TweenService_KS:Create(verify, TweenInfo.new(0.18), {
+        BackgroundColor3 = Color3.fromRGB(0, 230, 255),
+        Size = UDim2.new(1, -36, 0, 46),
+        Position = UDim2.new(0, 18, 0, 155),
+    }):Play()
+end)
+verify.MouseLeave:Connect(function()
+    TweenService_KS:Create(verify, TweenInfo.new(0.18), {
+        BackgroundColor3 = Color3.fromRGB(0, 180, 220),
+        Size = UDim2.new(1, -40, 0, 44),
+        Position = UDim2.new(0, 20, 0, 156),
+    }):Play()
+end)
+
+-- =====================
+-- KEY LOGIC
+-- =====================
 local verified = false
 local function checkKey()
     if box.Text == VERON_KEY then
         verified = true
-        status.Text = "✓ Key verified"
-        status.TextColor3 = Color3.fromRGB(90, 255, 140)
-        task.wait(0.35)
+        status.Text = "✅ Key verified! Loading..."
+        status.TextColor3 = Color3.fromRGB(60, 255, 180)
+        verify.Text = "✔ VERIFIED"
+        verify.BackgroundColor3 = Color3.fromRGB(0, 200, 120)
+        -- Slide out animation
+        TweenService_KS:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, -190, -1.5, 0)
+        }):Play()
+        task.wait(0.45)
         keyGui:Destroy()
         return true
     end
-    status.Text = "✕ Invalid key"
-    status.TextColor3 = Color3.fromRGB(255, 85, 85)
+    status.Text = "❌ Key salah! Coba lagi."
+    status.TextColor3 = Color3.fromRGB(255, 80, 80)
+    -- Shake animation on wrong key
+    local orig = frame.Position
+    for _ = 1, 4 do
+        TweenService_KS:Create(frame, TweenInfo.new(0.05), {
+            Position = UDim2.new(orig.X.Scale, orig.X.Offset + 8, orig.Y.Scale, orig.Y.Offset)
+        }):Play()
+        task.wait(0.05)
+        TweenService_KS:Create(frame, TweenInfo.new(0.05), {
+            Position = UDim2.new(orig.X.Scale, orig.X.Offset - 8, orig.Y.Scale, orig.Y.Offset)
+        }):Play()
+        task.wait(0.05)
+    end
+    TweenService_KS:Create(frame, TweenInfo.new(0.05), { Position = orig }):Play()
     return false
 end
 
